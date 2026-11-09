@@ -7,6 +7,7 @@ import '../../../core/utils/responsive_layout.dart';
 
 class LandingHeader extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onHomeTap;
+  final VoidCallback? onCategoriesTap;
   final VoidCallback? onHowItWorksTap;
   final VoidCallback? onAboutTap;
   final VoidCallback? onFindWorkersTap;
@@ -14,6 +15,7 @@ class LandingHeader extends StatelessWidget implements PreferredSizeWidget {
   const LandingHeader({
     super.key,
     this.onHomeTap,
+    this.onCategoriesTap,
     this.onHowItWorksTap,
     this.onAboutTap,
     this.onFindWorkersTap,
@@ -83,8 +85,8 @@ class LandingHeader extends StatelessWidget implements PreferredSizeWidget {
                       _NavLink(label: 'Home', onTap: onHomeTap ?? () => context.go(RouteNames.landing)),
                       const SizedBox(width: 18),
                       _NavLink(
-                        label: 'Find Workers',
-                        onTap: onFindWorkersTap ?? () => context.go(RouteNames.customerFindWorkers),
+                        label: 'Categories',
+                        onTap: onCategoriesTap,
                       ),
                       const SizedBox(width: 18),
                       _NavLink(label: 'How It Works', onTap: onHowItWorksTap),

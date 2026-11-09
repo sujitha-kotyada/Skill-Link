@@ -105,6 +105,12 @@ void main() {
     expect(homeNavLink, findsOneWidget);
     await tester.tap(homeNavLink);
     await tester.pumpAndSettle();
+
+    // Verify Categories is in header navigation and tapping it scrolls
+    final categoriesNavLink = find.text('Categories').first;
+    expect(categoriesNavLink, findsOneWidget);
+    await tester.tap(categoriesNavLink);
+    await tester.pumpAndSettle();
   });
 }
 

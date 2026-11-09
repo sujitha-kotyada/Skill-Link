@@ -69,6 +69,7 @@ class _LandingPageState extends State<LandingPage> {
           children: [
             LandingHeader(
               onHomeTap: _scrollToTop,
+              onCategoriesTap: () => _scrollToKey(_categoriesKey),
               onHowItWorksTap: () => _scrollToKey(_howItWorksKey),
               onAboutTap: () => _scrollToKey(_whyChooseKey),
               onFindWorkersTap: () => _handleFindWorkersTap(context),
@@ -140,11 +141,11 @@ class _LandingPageState extends State<LandingPage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.search_rounded, color: AppColors.primaryTeal),
-              title: const Text('Find Workers', style: TextStyle(fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.category_outlined, color: AppColors.primaryTeal),
+              title: const Text('Categories', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.pop(context);
-                _handleFindWorkersTap(context);
+                _scrollToKey(_categoriesKey);
               },
             ),
             ListTile(
