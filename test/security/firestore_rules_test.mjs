@@ -68,9 +68,10 @@ async function runSecurityTests() {
     }
   });
 
+  let aliceCreatedAt;
   // 2. Authenticated user creating their own valid profile must SUCCEED
   await assertRule('Authenticated user Alice can CREATE her own profile users/user_alice', async () => {
-    const now = new Date().toISOString();
+    aliceCreatedAt = new Date().toISOString();
     const body = {
       fields: {
         uid: { stringValue: 'user_alice' },
@@ -79,8 +80,8 @@ async function runSecurityTests() {
         activeRole: { stringValue: 'customer' },
         roles: { arrayValue: { values: [{ stringValue: 'customer' }] } },
         accountStatus: { stringValue: 'active' },
-        createdAt: { timestampValue: now },
-        updatedAt: { timestampValue: now },
+        createdAt: { timestampValue: aliceCreatedAt },
+        updatedAt: { timestampValue: aliceCreatedAt },
       },
     };
     const res = await firestoreRequest('PATCH', '/users/user_alice', body, 'user_alice');
@@ -286,6 +287,152 @@ async function runSecurityTests() {
     const res = await firestoreRequest('PATCH', '/workerProfiles/user_charlie', body, 'user_charlie');
     if (res.status !== 403) {
       throw new Error(`Expected 403 Forbidden, got ${res.status}: ${JSON.stringify(res.data)}`);
+    }
+  });
+
+  // 13. Create verified worker Dan account
+  await assertRule('Create verified worker Dan account', async () => {
+    const now = new Date().toISOString();
+    const body = {
+      fields: {
+        uid: { stringValue: 'user_dan' },
+        email: { stringValue: 'dan@example.com' },
+        fullName: { stringValue: 'Dan Plumber' },
+        activeRole: { stringValue: 'worker' },
+        roles: { arrayValue: { values: [{ stringValue: 'worker' }] } },
+        accountStatus: { stringValue: 'active' },
+        createdAt: { timestampValue: now },
+        updatedAt: { timestampValue: now },
+      },
+    };
+    const res = await firestoreRequest('PATCH', '/users/user_dan', body, 'user_dan');
+    if (res.status !== 200) {
+      throw new Error(`Expected 200 OK, got ${res.status}: ${JSON.stringify(res.data)}`);
+    }
+  });
+
+  // 14. Initial worker profile creation with rating 5.0 (the onboarding bug) MUST BE DENIED
+  await assertRule('Worker Dan initial profile creation with averageRating: 5.0 is DENIED', async () => {
+    const now = new Date().toISOString();
+    const body = {
+      fields: {
+        uid: { stringValue: 'user_dan' },
+        fullName: { stringValue: 'Dan Plumber' },
+        headline: { stringValue: 'Expert Plumber' },
+        category: { stringValue: 'Plumber' },
+        experienceYears: { integerValue: 5 },
+        city: { stringValue: 'Delhi' },
+        rate: { doubleValue: 450 },
+        availability: { stringValue: 'Immediate' },
+        profileStatus: { stringValue: 'completed' },
+        averageRating: { doubleValue: 5.0 }, // Rating fabrication on create!
+        reviewCount: { integerValue: 0 },
+        createdAt: { timestampValue: now },
+        updatedAt: { timestampValue: now },
+      },
+    };
+    const res = await firestoreRequest('PATCH', '/workerProfiles/user_dan', body, 'user_dan');
+    if (res.status !== 403) {
+      throw new Error(`Expected 403 Forbidden, got ${res.status}: ${JSON.stringify(res.data)}`);
+    }
+  });
+
+  // 15. Initial worker profile creation with rating 0.0 and reviewCount 0 SUCCEEDS
+  await assertRule('Worker Dan initial profile creation with averageRating: 0.0 and reviewCount: 0 SUCCEEDS', async () => {
+    const now = new Date().toISOString();
+    const body = {
+      fields: {
+        uid: { stringValue: 'user_dan' },
+        fullName: { stringValue: 'Dan Plumber' },
+        headline: { stringValue: 'Expert Plumber' },
+        category: { stringValue: 'Plumber' },
+        experienceYears: { integerValue: 5 },
+        city: { stringValue: 'Delhi' },
+        rate: { doubleValue: 450 },
+        availability: { stringValue: 'Immediate' },
+        profileStatus: { stringValue: 'completed' },
+        averageRating: { doubleValue: 0.0 },
+        reviewCount: { integerValue: 0 },
+        createdAt: { timestampValue: now },
+        updatedAt: { timestampValue: now },
+      },
+    };
+    const res = await firestoreRequest('PATCH', '/workerProfiles/user_dan', body, 'user_dan');
+    if (res.status !== 200) {
+      throw new Error(`Expected 200 OK, got ${res.status}: ${JSON.stringify(res.data)}`);
+    }
+  });
+
+  // 16. Customer Alice enrolls as worker (adds worker role to existing customer account)
+  await assertRule('Customer Alice can enroll in worker capability', async () => {
+    const now = new Date().toISOString();
+    const body = {
+      fields: {
+        uid: { stringValue: 'user_alice' },
+        email: { stringValue: 'alice@example.com' },
+        fullName: { stringValue: 'Alice Smith' },
+        activeRole: { stringValue: 'worker' },
+        roles: { arrayValue: { values: [{ stringValue: 'customer' }, { stringValue: 'worker' }] } },
+        accountStatus: { stringValue: 'active' },
+        createdAt: { timestampValue: aliceCreatedAt },
+        updatedAt: { timestampValue: now },
+      },
+    };
+    const res = await firestoreRequest('PATCH', '/users/user_alice', body, 'user_alice');
+    if (res.status !== 200) {
+      throw new Error(`Expected 200 OK, got ${res.status}: ${JSON.stringify(res.data)}`);
+    }
+  });
+
+  // 17. Now enrolled Alice CAN publish her worker profile
+  await assertRule('Enrolled Alice CAN publish worker profile with averageRating: 0.0', async () => {
+    const now = new Date().toISOString();
+    const body = {
+      fields: {
+        uid: { stringValue: 'user_alice' },
+        fullName: { stringValue: 'Alice Smith' },
+        headline: { stringValue: 'Now a Verified Painter' },
+        category: { stringValue: 'Painter' },
+        experienceYears: { integerValue: 3 },
+        city: { stringValue: 'Mumbai' },
+        rate: { doubleValue: 350 },
+        availability: { stringValue: 'Immediate' },
+        profileStatus: { stringValue: 'completed' },
+        averageRating: { doubleValue: 0.0 },
+        reviewCount: { integerValue: 0 },
+        createdAt: { timestampValue: now },
+        updatedAt: { timestampValue: now },
+      },
+    };
+    const res = await firestoreRequest('PATCH', '/workerProfiles/user_alice', body, 'user_alice');
+    if (res.status !== 200) {
+      throw new Error(`Expected 200 OK, got ${res.status}: ${JSON.stringify(res.data)}`);
+    }
+  });
+
+  // 18. Worker Charlie updating his profile while preserving rating & review count SUCCEEDS
+  await assertRule('Worker Charlie can update his profile while preserving rating & reviewCount', async () => {
+    const now = new Date().toISOString();
+    const body = {
+      fields: {
+        uid: { stringValue: 'user_charlie' },
+        fullName: { stringValue: 'Charlie Electrician' },
+        headline: { stringValue: 'Updated Headline Master Electrician' },
+        category: { stringValue: 'Electrician' },
+        experienceYears: { integerValue: 9 },
+        city: { stringValue: 'Pune' },
+        rate: { doubleValue: 700 },
+        availability: { stringValue: 'Immediate' },
+        profileStatus: { stringValue: 'completed' },
+        averageRating: { doubleValue: 0.0 }, // Preserves original rating
+        reviewCount: { integerValue: 0 },     // Preserves original count
+        createdAt: { timestampValue: now },
+        updatedAt: { timestampValue: now },
+      },
+    };
+    const res = await firestoreRequest('PATCH', '/workerProfiles/user_charlie', body, 'user_charlie');
+    if (res.status !== 200) {
+      throw new Error(`Expected 200 OK, got ${res.status}: ${JSON.stringify(res.data)}`);
     }
   });
 

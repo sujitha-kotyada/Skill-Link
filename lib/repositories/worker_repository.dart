@@ -17,6 +17,7 @@ class WorkerRepository {
       }
       return WorkerModel.fromMap(doc.data() as Map<String, dynamic>, docId: doc.id);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('Failed to fetch worker profile: $e');
     }
   }
@@ -30,6 +31,7 @@ class WorkerRepository {
         merge: true,
       );
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('Failed to save worker profile: $e');
     }
   }

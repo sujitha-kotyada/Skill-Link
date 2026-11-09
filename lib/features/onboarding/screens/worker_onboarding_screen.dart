@@ -111,6 +111,18 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
       return;
     }
 
+    // 1. Ensure worker role is persisted to users/{uid}.roles before creating the worker profile
+    if (!user.roles.contains(AppConstants.roleWorker)) {
+      final enrolled = await authProvider.enrollRole(AppConstants.roleWorker);
+      if (!enrolled) {
+        if (!mounted) return;
+        final errorMsg = authProvider.errorMessage ?? 'Failed to enroll worker capability.';
+        CustomSnackBar.showError(context, errorMsg);
+        return;
+      }
+    }
+
+    final existingProfile = authProvider.workerProfile;
     final now = DateTime.now();
     final worker = WorkerModel(
       uid: user.uid,
@@ -127,12 +139,12 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
       rateType: _rateType,
       availability: _availability,
       photoUrl: user.photoUrl,
-      portfolioImageUrls: authProvider.workerProfile?.portfolioImageUrls ?? [],
-      averageRating: authProvider.workerProfile?.averageRating ?? 5.0,
-      reviewCount: authProvider.workerProfile?.reviewCount ?? 0,
+      portfolioImageUrls: existingProfile?.portfolioImageUrls ?? [],
+      averageRating: existingProfile?.averageRating ?? 0.0,
+      reviewCount: existingProfile?.reviewCount ?? 0,
       profileStatus: 'completed',
       contactPhone: _phoneController.text.trim().isNotEmpty ? _phoneController.text.trim() : null,
-      createdAt: authProvider.workerProfile?.createdAt ?? now,
+      createdAt: existingProfile?.createdAt ?? now,
       updatedAt: now,
     );
 
@@ -142,6 +154,10 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
 
     if (success) {
       authProvider.setWorkerProfile(worker);
+      if (authProvider.currentUser?.activeRole != AppConstants.roleWorker) {
+        await authProvider.switchPortal(AppConstants.roleWorker);
+      }
+      if (!mounted) return;
       CustomSnackBar.showSuccess(context, 'Worker profile published successfully!');
       context.go(RouteNames.workerDashboard);
     } else {

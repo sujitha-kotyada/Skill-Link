@@ -103,7 +103,7 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
       workerName: user.fullName,
       workerCategory: worker?.category ?? _job!.category,
       workerPhotoUrl: user.photoUrl,
-      workerAverageRating: worker?.averageRating ?? 5.0,
+      workerAverageRating: worker?.averageRating ?? 0.0,
       message: _messageController.text.trim(),
       proposedRate: double.tryParse(_proposedRateController.text.trim()) ?? _job!.budget,
       proposedRateType: _proposedRateType,

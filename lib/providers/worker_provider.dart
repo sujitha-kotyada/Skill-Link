@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/exceptions/app_exception.dart';
 import '../models/job_model.dart';
 import '../models/worker_model.dart';
 import '../repositories/job_repository.dart';
@@ -69,6 +70,16 @@ class WorkerProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
+    } on PermissionException catch (e) {
+      _errorMessage = 'Permission denied: Insufficient permissions to save worker profile (${e.message}).';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on AppException catch (e) {
+      _errorMessage = e.message;
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
       _errorMessage = 'Failed to save profile: $e';
       _isLoading = false;

@@ -178,5 +178,50 @@ void main() {
       final readNotif = notif.copyWith(read: true);
       expect(readNotif.read, isTrue);
     });
+
+    test('Initial Worker profile payload conforms strictly to Firestore Security Rules schema', () {
+      final now = DateTime.now();
+      final initialWorker = WorkerModel(
+        uid: 'worker_new_1',
+        fullName: 'New Worker',
+        headline: 'Plumbing Specialist',
+        description: '5 years repairing residential plumbing',
+        skills: ['Pipe Fitting', 'Leak Repair'],
+        category: AppConstants.categoryPlumber,
+        experienceYears: 5,
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        locality: 'Andheri West',
+        rate: 450.0,
+        rateType: AppConstants.rateTypeHourly,
+        availability: 'Immediate (Full-time)',
+        averageRating: 0.0, // Rules require initial rating to be 0 or 0.0
+        reviewCount: 0,     // Rules require initial reviewCount to be 0
+        profileStatus: 'completed',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final map = initialWorker.toMap();
+
+      // Verify Firestore rule required keys
+      final requiredKeys = [
+        'uid', 'fullName', 'headline', 'category', 'experienceYears',
+        'city', 'rate', 'availability', 'profileStatus', 'createdAt', 'updatedAt'
+      ];
+      for (final key in requiredKeys) {
+        expect(map.containsKey(key), isTrue, reason: 'Missing rule-required key: $key');
+      }
+
+      // Verify numeric constraints
+      expect(map['rate'] is num, isTrue);
+      expect((map['rate'] as num) >= 0, isTrue);
+      expect(map['experienceYears'] is num, isTrue);
+      expect((map['experienceYears'] as num) >= 0, isTrue);
+
+      // Verify initial rating anti-tampering rule requirements
+      expect(map['averageRating'] == 0 || map['averageRating'] == 0.0, isTrue);
+      expect(map['reviewCount'], 0);
+    });
   });
 }
