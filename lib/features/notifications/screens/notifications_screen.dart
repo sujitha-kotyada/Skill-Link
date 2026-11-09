@@ -1,16 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/routing/route_names.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../models/notification_model.dart';
+import '../../../providers/application_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/notification_provider.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
+
+  Future<void> _handleNotificationTap(BuildContext context, NotificationModel notif) async {
+    final notifProvider = context.read<NotificationProvider>();
+    final appProvider = context.read<ApplicationProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.currentUser;
+
+    if (!notif.read) {
+      await notifProvider.markAsRead(notif.id);
+    }
+
+    if (!context.mounted) return;
+
+    if (notif.type == 'application') {
+      if (user != null && user.isCustomer) {
+        if (notif.relatedId != null && notif.relatedId!.isNotEmpty) {
+          try {
+            final app = await appProvider.getApplicationById(notif.relatedId!);
+            if (context.mounted && app != null) {
+              context.push('/customer/jobs/${app.jobId}/applications');
+              return;
+            }
+          } catch (_) {}
+        }
+        if (context.mounted) {
+          context.go(RouteNames.customerJobs);
+        }
+      } else if (user != null && user.isWorker) {
+        context.go(RouteNames.workerApplications);
+      }
+    } else if (notif.type == 'review') {
+      if (user != null && user.isWorker) {
+        context.go(RouteNames.workerProfile);
+      }
+    } else if (notif.type == 'job_status') {
+      if (user != null && user.isCustomer) {
+        context.go(RouteNames.customerJobs);
+      } else if (user != null && user.isWorker) {
+        context.go(RouteNames.workerApplications);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,11 +106,7 @@ class NotificationsScreen extends StatelessWidget {
                   final notif = notifications[index];
                   return _NotificationCard(
                     notification: notif,
-                    onTap: () {
-                      if (!notif.read) {
-                        notifProvider.markAsRead(notif.id);
-                      }
-                    },
+                    onTap: () => _handleNotificationTap(context, notif),
                   );
                 },
               );

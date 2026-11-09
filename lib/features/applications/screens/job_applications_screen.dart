@@ -75,10 +75,33 @@ class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
       body: SafeArea(
         child: MaxWidthContainer(
           child: StreamBuilder<List<ApplicationModel>>(
-            stream: appProvider.streamApplicationsForJob(widget.jobId),
+            stream: appProvider.streamApplicationsForJob(
+              widget.jobId,
+              customerId: user?.uid,
+            ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.errorRed),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading proposals: ${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               }
 
               final applications = snapshot.data ?? [];
@@ -97,7 +120,11 @@ class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
                 separatorBuilder: (context, index) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   final app = applications[index];
-                  return _ApplicationDetailCard(application: app, job: _job);
+                  return _ApplicationDetailCard(
+                    application: app,
+                    job: _job,
+                    isCustomerOwner: user?.uid == _job?.customerId,
+                  );
                 },
               );
             },
@@ -111,8 +138,13 @@ class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
 class _ApplicationDetailCard extends StatelessWidget {
   final ApplicationModel application;
   final JobModel? job;
+  final bool isCustomerOwner;
 
-  const _ApplicationDetailCard({required this.application, this.job});
+  const _ApplicationDetailCard({
+    required this.application,
+    this.job,
+    this.isCustomerOwner = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +172,13 @@ class _ApplicationDetailCard extends StatelessWidget {
                       application.workerName,
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.charcoal),
                     ),
+                    if (application.workerHeadline.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        application.workerHeadline,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryTeal),
+                      ),
+                    ],
                     Text(
                       application.workerCategory,
                       style: const TextStyle(fontSize: 13, color: AppColors.secondaryGrey),
@@ -170,6 +209,64 @@ class _ApplicationDetailCard extends StatelessWidget {
               ),
             ],
           ),
+
+          // Worker Details: Location & Experience
+          if (application.workerLocation.isNotEmpty || application.workerExperienceYears > 0) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                if (application.workerLocation.isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 14, color: AppColors.secondaryGrey),
+                      const SizedBox(width: 4),
+                      Text(
+                        application.workerLocation,
+                        style: const TextStyle(fontSize: 12, color: AppColors.secondaryGrey),
+                      ),
+                    ],
+                  ),
+                if (application.workerExperienceYears > 0)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.work_history_outlined, size: 14, color: AppColors.secondaryGrey),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${application.workerExperienceYears} years exp',
+                        style: const TextStyle(fontSize: 12, color: AppColors.secondaryGrey),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+
+          // Worker Skills
+          if (application.workerSkills.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: application.workerSkills.map((skill) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.tealSurface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    skill,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primaryTeal),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
@@ -200,7 +297,7 @@ class _ApplicationDetailCard extends StatelessWidget {
                 onPressed: () => context.push('/customer/workers/${application.workerId}'),
               ),
               const Spacer(),
-              if (application.isApplied || application.isUnderReview) ...[
+              if (isCustomerOwner && (application.isApplied || application.isUnderReview)) ...[
                 TextButton(
                   onPressed: () async {
                     final ok = await appProvider.rejectApplication(application);
@@ -224,7 +321,7 @@ class _ApplicationDetailCard extends StatelessWidget {
                   ),
                   child: const Text('Accept Worker'),
                 ),
-              ] else if (application.isAccepted) ...[
+              ] else if (isCustomerOwner && application.isAccepted) ...[
                 // If accepted and customer wants to leave a review
                 ElevatedButton.icon(
                   icon: const Icon(Icons.star_outline_rounded, size: 16),

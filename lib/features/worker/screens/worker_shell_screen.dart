@@ -8,7 +8,9 @@ import '../../../core/routing/route_names.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/custom_snackbar.dart';
+import '../../../models/notification_model.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/notification_provider.dart';
 
 class WorkerShellScreen extends StatefulWidget {
   final Widget child;
@@ -137,10 +139,29 @@ class _WorkerShellScreenState extends State<WorkerShellScreen> {
             onPressed: () => _handleSwitchToCustomer(context),
           ),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: AppColors.charcoal),
-            onPressed: () => context.push(RouteNames.notifications),
-          ),
+          if (user != null)
+            StreamBuilder<List<NotificationModel>>(
+              stream: context.read<NotificationProvider>().streamNotifications(user.uid),
+              builder: (context, snapshot) {
+                final unreadCount = snapshot.data?.where((n) => !n.read).length ?? 0;
+                return Badge(
+                  isLabelVisible: unreadCount > 0,
+                  label: Text('$unreadCount', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  backgroundColor: AppColors.terracotta,
+                  alignment: const AlignmentDirectional(0.7, -0.7),
+                  child: IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded, color: AppColors.charcoal),
+                    tooltip: 'Notifications',
+                    onPressed: () => context.push(RouteNames.notifications),
+                  ),
+                );
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.notifications_none_rounded, color: AppColors.charcoal),
+              onPressed: () => context.push(RouteNames.notifications),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 16, left: 4),
             child: InkWell(

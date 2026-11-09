@@ -11,7 +11,9 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../../models/application_model.dart';
 import '../../../models/job_model.dart';
+import '../../../providers/application_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/job_provider.dart';
 
@@ -29,6 +31,7 @@ class _CustomerJobsScreenState extends State<CustomerJobsScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final jobProvider = context.watch<JobProvider>();
+    final appProvider = context.watch<ApplicationProvider>();
     final user = authProvider.currentUser;
 
     if (user == null) {
@@ -98,13 +101,20 @@ class _CustomerJobsScreenState extends State<CustomerJobsScreen> {
                       );
                     }
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: filteredJobs.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) {
-                        final job = filteredJobs[index];
-                        return _CustomerJobDetailedCard(job: job);
+                    return StreamBuilder<List<ApplicationModel>>(
+                      stream: appProvider.streamCustomerApplications(user.uid),
+                      builder: (context, appSnapshot) {
+                        final allApps = appSnapshot.data ?? [];
+                        return ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: filteredJobs.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 14),
+                          itemBuilder: (context, index) {
+                            final job = filteredJobs[index];
+                            final count = ApplicationProvider.countActiveProposals(allApps, jobId: job.id);
+                            return _CustomerJobDetailedCard(job: job, proposalCount: count);
+                          },
+                        );
                       },
                     );
                   },
@@ -142,8 +152,12 @@ class _CustomerJobsScreenState extends State<CustomerJobsScreen> {
 
 class _CustomerJobDetailedCard extends StatelessWidget {
   final JobModel job;
+  final int proposalCount;
 
-  const _CustomerJobDetailedCard({required this.job});
+  const _CustomerJobDetailedCard({
+    required this.job,
+    this.proposalCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +218,7 @@ class _CustomerJobDetailedCard extends StatelessWidget {
             children: [
               // Applications Counter Button
               AppButton(
-                label: '${job.applicantCount} Applications',
+                label: ApplicationProvider.formatApplicationCount(proposalCount),
                 icon: Icons.people_outline_rounded,
                 onPressed: () => context.push('/customer/jobs/${job.id}/applications', extra: job),
                 variant: AppButtonVariant.primary,

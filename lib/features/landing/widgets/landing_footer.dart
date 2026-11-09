@@ -81,7 +81,9 @@ class FinalCtaSection extends StatelessWidget {
 }
 
 class LandingFooter extends StatelessWidget {
-  const LandingFooter({super.key});
+  final VoidCallback? onHomeTap;
+
+  const LandingFooter({super.key, this.onHomeTap});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +162,7 @@ class LandingFooter extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _FooterLink(label: 'Home', onTap: () => context.go(RouteNames.landing)),
+                            _FooterLink(label: 'Home', onTap: onHomeTap ?? () => context.go(RouteNames.landing)),
                             _FooterLink(label: 'Find Workers', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
                             _FooterLink(label: 'Sign In', onTap: () => context.go(RouteNames.login)),
                             _FooterLink(label: 'Get Started', onTap: () => context.go(RouteNames.register)),
@@ -235,7 +237,7 @@ class LandingFooter extends StatelessWidget {
                         spacing: 16,
                         runSpacing: 8,
                         children: [
-                          _FooterLink(label: 'Home', onTap: () => context.go(RouteNames.landing)),
+                          _FooterLink(label: 'Home', onTap: onHomeTap ?? () => context.go(RouteNames.landing)),
                           _FooterLink(label: 'Find Workers', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
                           _FooterLink(label: 'Sign In', onTap: () => context.go(RouteNames.login)),
                           _FooterLink(label: 'Register', onTap: () => context.go(RouteNames.register)),

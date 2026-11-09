@@ -38,6 +38,8 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
 
   JobModel? _job;
   bool _isLoadingJob = false;
+  bool _isSubmitting = false;
+  bool _alreadyApplied = false;
   String _proposedRateType = AppConstants.rateTypeFixed;
 
   @override
@@ -49,6 +51,18 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
     } else {
       _proposedRateController.text = _job!.budget.toStringAsFixed(0);
       _proposedRateType = _job!.paymentType;
+      _checkAlreadyApplied();
+    }
+  }
+
+  Future<void> _checkAlreadyApplied() async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user != null && _job != null) {
+      final applied = await context.read<ApplicationProvider>().checkAlreadyApplied(
+        jobId: _job!.id,
+        workerId: user.uid,
+      );
+      if (mounted) setState(() => _alreadyApplied = applied);
     }
   }
 
@@ -64,6 +78,9 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
           _proposedRateType = j.paymentType;
         }
       });
+      if (j != null) {
+        _checkAlreadyApplied();
+      }
     }
   }
 
@@ -75,6 +92,7 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
   }
 
   Future<void> _handleSubmit() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
     if (_job == null) return;
 
@@ -93,6 +111,13 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
       return;
     }
 
+    if (_alreadyApplied) {
+      CustomSnackBar.showError(context, 'You have already applied for this job.');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
     final now = DateTime.now();
     final application = ApplicationModel(
       id: '',
@@ -104,6 +129,10 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
       workerCategory: worker?.category ?? _job!.category,
       workerPhotoUrl: user.photoUrl,
       workerAverageRating: worker?.averageRating ?? 0.0,
+      workerHeadline: worker?.headline ?? '',
+      workerSkills: worker?.skills ?? [],
+      workerExperienceYears: worker?.experienceYears ?? 0,
+      workerLocation: worker?.locationString ?? (worker?.city ?? ''),
       message: _messageController.text.trim(),
       proposedRate: double.tryParse(_proposedRateController.text.trim()) ?? _job!.budget,
       proposedRateType: _proposedRateType,
@@ -115,6 +144,7 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
     final success = await appProvider.applyForJob(application);
 
     if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     if (success) {
       CustomSnackBar.showSuccess(context, 'Proposal submitted successfully! The customer has been notified.');
@@ -265,16 +295,47 @@ class _ApplyJobScreenState extends State<ApplyJobScreen> {
                           maxLines: 5,
                           validator: (val) => Validators.validateRequired(val, 'Proposal message'),
                         ),
-                        const SizedBox(height: 28),
-
-                        AppButton(
-                          label: 'Submit Application',
-                          icon: Icons.send_rounded,
-                          isLoading: appProvider.isSubmitting,
-                          onPressed: _handleSubmit,
-                          isFullWidth: true,
-                          variant: AppButtonVariant.secondary,
-                        ),
+                        if (_alreadyApplied) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.tealSurface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.primaryTeal),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: AppColors.primaryTeal, size: 24),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'You have already submitted a proposal for this job.',
+                                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.deepForestTeal),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          AppButton(
+                            label: 'View My Applications',
+                            icon: Icons.list_alt_rounded,
+                            onPressed: () => context.go(RouteNames.workerApplications),
+                            isFullWidth: true,
+                            variant: AppButtonVariant.primary,
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 28),
+                          AppButton(
+                            label: 'Submit Application',
+                            icon: Icons.send_rounded,
+                            isLoading: _isSubmitting || appProvider.isSubmitting,
+                            onPressed: (_isSubmitting || appProvider.isSubmitting) ? null : _handleSubmit,
+                            isFullWidth: true,
+                            variant: AppButtonVariant.secondary,
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -9,6 +9,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/custom_snackbar.dart';
+import '../../../core/widgets/indian_location_selector.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/worker_provider.dart';
 
@@ -26,12 +27,12 @@ class _EditWorkerProfileScreenState extends State<EditWorkerProfileScreen> {
   final _descController = TextEditingController();
   final _skillInputController = TextEditingController();
   final _experienceController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   final _localityController = TextEditingController();
   final _rateController = TextEditingController();
   final _phoneController = TextEditingController();
 
+  String? _selectedState;
+  String? _selectedCity;
   String _selectedCategory = AppConstants.categoryElectrician;
   String _rateType = AppConstants.rateTypeHourly;
   String _availability = AppConstants.availabilityOptions.first;
@@ -47,12 +48,12 @@ class _EditWorkerProfileScreenState extends State<EditWorkerProfileScreen> {
         _headlineController.text = p.headline;
         _descController.text = p.description;
         _experienceController.text = p.experienceYears.toString();
-        _cityController.text = p.city;
-        _stateController.text = p.state;
         _localityController.text = p.locality;
         _rateController.text = p.rate.toStringAsFixed(0);
         _phoneController.text = p.contactPhone ?? '';
         setState(() {
+          _selectedState = p.state.isNotEmpty ? p.state : null;
+          _selectedCity = p.city.isNotEmpty ? p.city : null;
           _selectedCategory = p.category;
           _rateType = p.rateType;
           _availability = p.availability;
@@ -68,8 +69,6 @@ class _EditWorkerProfileScreenState extends State<EditWorkerProfileScreen> {
     _descController.dispose();
     _skillInputController.dispose();
     _experienceController.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
     _localityController.dispose();
     _rateController.dispose();
     _phoneController.dispose();
@@ -110,8 +109,8 @@ class _EditWorkerProfileScreenState extends State<EditWorkerProfileScreen> {
       skills: _skills,
       category: _selectedCategory,
       experienceYears: int.tryParse(_experienceController.text.trim()) ?? existing.experienceYears,
-      city: _cityController.text.trim(),
-      state: _stateController.text.trim(),
+      city: _selectedCity ?? existing.city,
+      state: _selectedState ?? existing.state,
       locality: _localityController.text.trim(),
       rate: double.tryParse(_rateController.text.trim()) ?? existing.rate,
       rateType: _rateType,
@@ -277,24 +276,11 @@ class _EditWorkerProfileScreenState extends State<EditWorkerProfileScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppTextField(
-                            controller: _cityController,
-                            label: 'City',
-                            validator: (val) => Validators.validateRequired(val, 'City'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: AppTextField(
-                            controller: _stateController,
-                            label: 'State',
-                            validator: (val) => Validators.validateRequired(val, 'State'),
-                          ),
-                        ),
-                      ],
+                    IndianLocationSelector(
+                      initialSelectedState: _selectedState,
+                      initialSelectedCity: _selectedCity,
+                      onStateChanged: (val) => setState(() => _selectedState = val),
+                      onCityChanged: (val) => setState(() => _selectedCity = val),
                     ),
                     const SizedBox(height: 18),
                     AppTextField(

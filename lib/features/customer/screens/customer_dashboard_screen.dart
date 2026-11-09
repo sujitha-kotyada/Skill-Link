@@ -11,8 +11,10 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/rating_stars.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../../models/application_model.dart';
 import '../../../models/job_model.dart';
 import '../../../models/worker_model.dart';
+import '../../../providers/application_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/job_provider.dart';
@@ -290,6 +292,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
   }
 
   Widget _buildMyJobsSection(BuildContext context, JobProvider jobProvider, String customerId) {
+    final appProvider = context.watch<ApplicationProvider>();
     return StreamBuilder<List<JobModel>>(
       stream: jobProvider.streamCustomerJobs(customerId),
       builder: (context, snapshot) {
@@ -300,38 +303,46 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
 
         final recentJobs = jobs.take(3).toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StreamBuilder<List<ApplicationModel>>(
+          stream: appProvider.streamCustomerApplications(customerId),
+          builder: (context, appSnapshot) {
+            final allApps = appSnapshot.data ?? [];
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Your Posted Jobs',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.charcoal,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Your Posted Jobs',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.charcoal,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.go(RouteNames.customerJobs),
+                      child: const Text('Manage All Jobs'),
+                    ),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => context.go(RouteNames.customerJobs),
-                  child: const Text('Manage All Jobs'),
+                const SizedBox(height: 12),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recentJobs.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final job = recentJobs[index];
+                    final count = ApplicationProvider.countActiveProposals(allApps, jobId: job.id);
+                    return _CustomerJobSnippetCard(job: job, proposalCount: count);
+                  },
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: recentJobs.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final job = recentJobs[index];
-                return _CustomerJobSnippetCard(job: job);
-              },
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -467,11 +478,17 @@ class _QuickActionCard extends StatelessWidget {
 
 class _CustomerJobSnippetCard extends StatelessWidget {
   final JobModel job;
+  final int proposalCount;
 
-  const _CustomerJobSnippetCard({required this.job});
+  const _CustomerJobSnippetCard({
+    required this.job,
+    this.proposalCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final proposalLabel = ApplicationProvider.formatProposalCount(proposalCount);
+
     return AppCard(
       padding: const EdgeInsets.all(16),
       onTap: () => context.push('/customer/jobs/${job.id}'),
@@ -508,15 +525,20 @@ class _CustomerJobSnippetCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.tealSurface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${job.applicantCount} Proposals',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryTeal),
+              InkWell(
+                onTap: () => context.push('/customer/jobs/${job.id}/applications', extra: job),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.tealSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primaryTeal.withAlpha(50)),
+                  ),
+                  child: Text(
+                    proposalLabel,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryTeal),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),

@@ -7,13 +7,18 @@ Skill-Link includes an automated test suite verifying data serialization, valida
 ```
 test/
 ├── unit/
+│   ├── proposal_count_test.dart         # Tests dynamic proposals count, isolation & formatting
+│   ├── indian_locations_test.dart       # Tests 28 states, 8 UTs, city maps & custom values
 │   ├── model_serialization_test.dart   # Tests UserModel, WorkerModel, JobModel, etc.
 │   ├── validators_test.dart             # Tests input validation rules
 │   └── role_logic_test.dart             # Tests role switching and anti-escalation
-└── widget/
-    ├── landing_page_test.dart           # Tests LandingPage layout & desktop/mobile rendering
-    ├── reusable_widgets_test.dart       # Tests AppButton, Badges, RatingStars, EmptyState
-    └── ../widget_test.dart              # App brand smoke test
+├── widget/
+│   ├── indian_location_selector_test.dart # Tests dependent state/city cascading dropdown
+│   ├── landing_page_test.dart           # Tests LandingPage layout & desktop/mobile rendering
+│   ├── reusable_widgets_test.dart       # Tests AppButton, Badges, RatingStars, EmptyState
+│   └── ../widget_test.dart              # App brand smoke test
+└── security/
+    └── firestore_rules_test.mjs         # 32 automated tests running against Firestore Emulator
 ```
 
 ---

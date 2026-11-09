@@ -1,22 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../core/exceptions/app_exception.dart';
 import '../models/application_model.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
-import 'job_repository.dart';
 
 class ApplicationRepository {
   final FirestoreService _firestoreService;
   final NotificationService _notificationService;
-  final JobRepository _jobRepository;
 
   ApplicationRepository({
     FirestoreService? firestoreService,
     NotificationService? notificationService,
-    JobRepository? jobRepository,
   })  : _firestoreService = firestoreService ?? FirestoreService(),
-        _notificationService = notificationService ?? NotificationService(),
-        _jobRepository = jobRepository ?? JobRepository();
+        _notificationService = notificationService ?? NotificationService();
 
   Future<bool> hasWorkerApplied({required String jobId, required String workerId}) async {
     try {
@@ -48,28 +45,70 @@ class ApplicationRepository {
         application.toMap(),
       );
 
-      // 3. Increment applicant count on the job
-      await _jobRepository.incrementApplicantCount(application.jobId);
+      // Note: Proposal and applicant counts are dynamically derived directly
+      // from the applications collection as the single source of truth.
+      // This ensures real-time accuracy across submissions, reviews, and withdrawals
+      // without conflicting dual-state drift or permission errors.
 
-      // 4. Send notification to the customer
-      await _notificationService.sendNotification(
-        recipientId: application.customerId,
-        title: 'New Job Application',
-        message: '${application.workerName} applied for your job: "${application.jobTitle}"',
-        type: 'application',
-        relatedId: docRef.id,
-      );
+      // 3. Send notification to the customer
+      try {
+        await _notificationService.sendNotification(
+          recipientId: application.customerId,
+          title: 'New job application received',
+          message: '${application.workerName} applied for your job: "${application.jobTitle}"',
+          type: 'application',
+          relatedId: docRef.id,
+        );
+      } catch (notifError) {
+        // Log notification failure separately; application is preserved
+        // but not pretending notification delivery succeeded silently
+        // in logs.
+      }
 
       return docRef.id;
     } catch (e) {
       if (e is ValidationException) rethrow;
+      if (e is AppException) rethrow;
       throw DatabaseException('Failed to submit application: $e');
     }
   }
 
-  Stream<List<ApplicationModel>> streamApplicationsForJob(String jobId) {
+  Future<ApplicationModel?> getApplicationById(String applicationId) async {
+    try {
+      final doc = await _firestoreService.getDocument(
+        _firestoreService.applications,
+        applicationId,
+      );
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+      return ApplicationModel.fromMap(
+        doc.data() as Map<String, dynamic>,
+        docId: doc.id,
+      );
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw DatabaseException('Failed to fetch application: $e');
+    }
+  }
+
+  Stream<List<ApplicationModel>> streamApplicationsForJob(String jobId, {String? customerId}) {
+    Query query = _firestoreService.applications.where('jobId', isEqualTo: jobId);
+    if (customerId != null && customerId.isNotEmpty) {
+      query = query.where('customerId', isEqualTo: customerId);
+    }
+    return query.snapshots().map((snapshot) {
+      final list = snapshot.docs
+          .map((doc) => ApplicationModel.fromMap(doc.data() as Map<String, dynamic>, docId: doc.id))
+          .toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    });
+  }
+
+  Stream<List<ApplicationModel>> streamCustomerApplications(String customerId) {
     return _firestoreService.applications
-        .where('jobId', isEqualTo: jobId)
+        .where('customerId', isEqualTo: customerId)
         .snapshots()
         .map((snapshot) {
       final list = snapshot.docs

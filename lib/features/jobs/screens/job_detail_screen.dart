@@ -8,6 +8,7 @@ import '../../../core/utils/responsive_layout.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../../models/application_model.dart';
 import '../../../models/job_model.dart';
 import '../../../providers/application_provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -71,6 +72,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final jobProvider = context.watch<JobProvider>();
+    final appProvider = context.watch<ApplicationProvider>();
     final user = authProvider.currentUser;
 
     if (_isLoading) {
@@ -91,13 +93,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final job = _job!;
     final isCustomerOwner = user?.uid == job.customerId;
 
-    return Scaffold(
-      backgroundColor: AppColors.warmCream,
-      appBar: AppBar(
-        title: const Text('Job Details', style: TextStyle(fontWeight: FontWeight.w700)),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
+    return StreamBuilder<List<ApplicationModel>>(
+      stream: isCustomerOwner
+          ? appProvider.streamApplicationsForJob(job.id, customerId: user?.uid)
+          : null,
+      builder: (context, appSnapshot) {
+        final apps = appSnapshot.data ?? [];
+        final proposalCount = isCustomerOwner
+            ? ApplicationProvider.countActiveProposals(apps, jobId: job.id)
+            : job.applicantCount;
+
+        final proposalsSubmittedLabel = proposalCount == 1
+            ? '1 proposal submitted'
+            : '$proposalCount proposals submitted';
+
+        final reviewButtonLabel = 'Review Applications ($proposalCount)';
+
+        return Scaffold(
+          backgroundColor: AppColors.warmCream,
+          appBar: AppBar(
+            title: const Text('Job Details', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: MaxWidthContainer(
             maxWidth: 800,
@@ -185,7 +203,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.charcoal),
                             ),
                             const SizedBox(height: 4),
-                            Text('${job.applicantCount} proposals submitted', style: const TextStyle(fontSize: 11, color: AppColors.secondaryGrey)),
+                            Text(proposalsSubmittedLabel, style: const TextStyle(fontSize: 11, color: AppColors.secondaryGrey)),
                           ],
                         ),
                       ),
@@ -251,7 +269,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 // Action Area Based on User Role
                 if (isCustomerOwner) ...[
                   AppButton(
-                    label: 'Review Applications (${job.applicantCount})',
+                    label: reviewButtonLabel,
                     icon: Icons.people_outline_rounded,
                     onPressed: () => context.push('/customer/jobs/${job.id}/applications', extra: job),
                     isFullWidth: true,
@@ -340,5 +358,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       ),
     );
+  },
+);
   }
 }

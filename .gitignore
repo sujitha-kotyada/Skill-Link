@@ -54,3 +54,20 @@ ui-debug.log*
 .env.*
 !.env.example
 
+# Keystores, signing keys, and private service credentials
+*.keystore
+*.jks
+*.p12
+*.key
+*.pem
+key.properties
+*service-account*.json
+*serviceAccount*.json
+
+# Android local machine configuration
+**/android/local.properties
+.gradle/
+
+# Node dependencies
+node_modules/
+

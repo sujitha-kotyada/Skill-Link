@@ -10,6 +10,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/custom_snackbar.dart';
+import '../../../core/widgets/indian_location_selector.dart';
 import '../../../models/job_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/job_provider.dart';
@@ -28,12 +29,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
   final _descController = TextEditingController();
   final _skillInputController = TextEditingController();
   final _locationController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   final _dateController = TextEditingController();
   final _budgetController = TextEditingController();
   final _instructionsController = TextEditingController();
 
+  String? _selectedState;
+  String? _selectedCity;
   String _selectedCategory = AppConstants.categoryElectrician;
   String _paymentType = AppConstants.rateTypeFixed;
   final List<String> _skills = [];
@@ -44,8 +45,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
     _descController.dispose();
     _skillInputController.dispose();
     _locationController.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
     _dateController.dispose();
     _budgetController.dispose();
     _instructionsController.dispose();
@@ -88,8 +87,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
       description: _descController.text.trim(),
       requiredSkills: _skills,
       location: _locationController.text.trim(),
-      city: _cityController.text.trim(),
-      state: _stateController.text.trim(),
+      city: _selectedCity?.trim() ?? '',
+      state: _selectedState?.trim() ?? '',
       preferredDate: _dateController.text.trim().isNotEmpty ? _dateController.text.trim() : null,
       budget: double.tryParse(_budgetController.text.trim()) ?? 0.0,
       paymentType: _paymentType,
@@ -243,29 +242,20 @@ class _PostJobScreenState extends State<PostJobScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Location fields
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppTextField(
-                            controller: _cityController,
-                            label: 'City',
-                            hint: 'e.g. Bengaluru',
-                            prefixIcon: Icons.location_city_rounded,
-                            validator: (val) => Validators.validateRequired(val, 'City'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: AppTextField(
-                            controller: _stateController,
-                            label: 'State',
-                            hint: 'e.g. Karnataka',
-                            prefixIcon: Icons.map_outlined,
-                            validator: (val) => Validators.validateRequired(val, 'State'),
-                          ),
-                        ),
-                      ],
+                    // State and City Dependent Dropdowns
+                    IndianLocationSelector(
+                      initialSelectedState: _selectedState,
+                      initialSelectedCity: _selectedCity,
+                      onStateChanged: (val) {
+                        setState(() {
+                          _selectedState = val;
+                        });
+                      },
+                      onCityChanged: (val) {
+                        setState(() {
+                          _selectedCity = val;
+                        });
+                      },
                     ),
                     const SizedBox(height: 18),
                     AppTextField(

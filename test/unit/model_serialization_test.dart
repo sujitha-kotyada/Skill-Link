@@ -119,6 +119,10 @@ void main() {
         workerId: 'worker_456',
         workerName: 'Rajesh Carpenter',
         workerCategory: 'Plumber',
+        workerHeadline: 'Expert Pipe Fitter & Leak Specialist',
+        workerSkills: ['Pipe Fitting', 'Leak Repair', 'Drain Cleaning'],
+        workerExperienceYears: 8,
+        workerLocation: 'Indiranagar, Bengaluru',
         message: 'I can come today at 3 PM and fix this within 1 hour.',
         proposedRate: 500.0,
         status: AppConstants.appStatusApplied,
@@ -128,6 +132,43 @@ void main() {
 
       expect(app.isApplied, isTrue);
       expect(app.isAccepted, isFalse);
+      expect(app.workerHeadline, 'Expert Pipe Fitter & Leak Specialist');
+      expect(app.workerSkills, contains('Pipe Fitting'));
+      expect(app.workerExperienceYears, 8);
+      expect(app.workerLocation, 'Indiranagar, Bengaluru');
+
+      // Test serialization and deserialization
+      final map = app.toMap();
+      expect(map['workerHeadline'], 'Expert Pipe Fitter & Leak Specialist');
+      expect(map['workerExperienceYears'], 8);
+      expect(map['workerLocation'], 'Indiranagar, Bengaluru');
+      expect((map['workerSkills'] as List), contains('Pipe Fitting'));
+
+      final restored = ApplicationModel.fromMap(map, docId: 'app_999');
+      expect(restored.workerHeadline, 'Expert Pipe Fitter & Leak Specialist');
+      expect(restored.workerExperienceYears, 8);
+      expect(restored.workerLocation, 'Indiranagar, Bengaluru');
+      expect(restored.workerSkills, contains('Leak Repair'));
+
+      // Backward compatibility: old maps without worker profile fields
+      final legacyMap = <String, dynamic>{
+        'jobId': 'job_789',
+        'jobTitle': 'Fix Kitchen Sink Pipe Leak',
+        'customerId': 'customer_111',
+        'workerId': 'worker_456',
+        'workerName': 'Rajesh Carpenter',
+        'workerCategory': 'Plumber',
+        'message': 'Legacy message',
+        'proposedRate': 450.0,
+        'status': 'applied',
+        'createdAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
+      };
+      final legacyRestored = ApplicationModel.fromMap(legacyMap, docId: 'app_legacy');
+      expect(legacyRestored.workerHeadline, '');
+      expect(legacyRestored.workerSkills, isEmpty);
+      expect(legacyRestored.workerExperienceYears, 0);
+      expect(legacyRestored.workerLocation, '');
 
       final accepted = app.copyWith(status: AppConstants.appStatusAccepted);
       expect(accepted.isAccepted, isTrue);

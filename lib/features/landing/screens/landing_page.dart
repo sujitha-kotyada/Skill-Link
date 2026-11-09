@@ -68,6 +68,7 @@ class _LandingPageState extends State<LandingPage> {
         child: Column(
           children: [
             LandingHeader(
+              onHomeTap: _scrollToTop,
               onHowItWorksTap: () => _scrollToKey(_howItWorksKey),
               onAboutTap: () => _scrollToKey(_whyChooseKey),
               onFindWorkersTap: () => _handleFindWorkersTap(context),
@@ -86,7 +87,7 @@ class _LandingPageState extends State<LandingPage> {
                     const CommunityImpactSection(),
                     const TestimonialsSection(),
                     const FinalCtaSection(),
-                    const LandingFooter(),
+                    LandingFooter(onHomeTap: _scrollToTop),
                   ],
                 ),
               ),

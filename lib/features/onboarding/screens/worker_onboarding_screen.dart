@@ -10,6 +10,7 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/custom_snackbar.dart';
+import '../../../core/widgets/indian_location_selector.dart';
 import '../../../models/worker_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/worker_provider.dart';
@@ -28,12 +29,12 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
   final _descController = TextEditingController();
   final _skillInputController = TextEditingController();
   final _experienceController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   final _localityController = TextEditingController();
   final _rateController = TextEditingController();
   final _phoneController = TextEditingController();
 
+  String? _selectedState;
+  String? _selectedCity;
   String _selectedCategory = AppConstants.categoryElectrician;
   String _rateType = AppConstants.rateTypeHourly;
   String _availability = AppConstants.availabilityOptions.first;
@@ -49,12 +50,12 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
         _headlineController.text = p.headline;
         _descController.text = p.description;
         _experienceController.text = p.experienceYears.toString();
-        _cityController.text = p.city;
-        _stateController.text = p.state;
         _localityController.text = p.locality;
         _rateController.text = p.rate.toStringAsFixed(0);
         _phoneController.text = p.contactPhone ?? '';
         setState(() {
+          _selectedState = p.state.isNotEmpty ? p.state : null;
+          _selectedCity = p.city.isNotEmpty ? p.city : null;
           _selectedCategory = p.category;
           _rateType = p.rateType;
           _availability = p.availability;
@@ -70,8 +71,6 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
     _descController.dispose();
     _skillInputController.dispose();
     _experienceController.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
     _localityController.dispose();
     _rateController.dispose();
     _phoneController.dispose();
@@ -132,8 +131,8 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
       skills: _skills,
       category: _selectedCategory,
       experienceYears: int.tryParse(_experienceController.text.trim()) ?? 1,
-      city: _cityController.text.trim(),
-      state: _stateController.text.trim(),
+      city: _selectedCity ?? '',
+      state: _selectedState ?? '',
       locality: _localityController.text.trim(),
       rate: double.tryParse(_rateController.text.trim()) ?? 0.0,
       rateType: _rateType,
@@ -350,29 +349,12 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Location Fields: City & State & Locality
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppTextField(
-                            controller: _cityController,
-                            label: 'City',
-                            hint: 'e.g. Bengaluru',
-                            prefixIcon: Icons.location_city_rounded,
-                            validator: (val) => Validators.validateRequired(val, 'City'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: AppTextField(
-                            controller: _stateController,
-                            label: 'State',
-                            hint: 'e.g. Karnataka',
-                            prefixIcon: Icons.map_outlined,
-                            validator: (val) => Validators.validateRequired(val, 'State'),
-                          ),
-                        ),
-                      ],
+                    // Location Fields: Indian State and City Dropdowns
+                    IndianLocationSelector(
+                      initialSelectedState: _selectedState,
+                      initialSelectedCity: _selectedCity,
+                      onStateChanged: (val) => setState(() => _selectedState = val),
+                      onCityChanged: (val) => setState(() => _selectedCity = val),
                     ),
                     const SizedBox(height: 18),
                     AppTextField(

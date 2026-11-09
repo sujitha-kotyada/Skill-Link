@@ -11,6 +11,10 @@ class ApplicationModel {
   final String workerCategory;
   final String? workerPhotoUrl;
   final double workerAverageRating;
+  final String workerHeadline;
+  final List<String> workerSkills;
+  final int workerExperienceYears;
+  final String workerLocation;
   final String message;
   final double proposedRate;
   final String proposedRateType;
@@ -28,6 +32,10 @@ class ApplicationModel {
     required this.workerCategory,
     this.workerPhotoUrl,
     this.workerAverageRating = 0.0,
+    this.workerHeadline = '',
+    this.workerSkills = const [],
+    this.workerExperienceYears = 0,
+    this.workerLocation = '',
     required this.message,
     required this.proposedRate,
     this.proposedRateType = AppConstants.rateTypeFixed,
@@ -52,6 +60,10 @@ class ApplicationModel {
     String? workerCategory,
     String? workerPhotoUrl,
     double? workerAverageRating,
+    String? workerHeadline,
+    List<String>? workerSkills,
+    int? workerExperienceYears,
+    String? workerLocation,
     String? message,
     double? proposedRate,
     String? proposedRateType,
@@ -69,6 +81,10 @@ class ApplicationModel {
       workerCategory: workerCategory ?? this.workerCategory,
       workerPhotoUrl: workerPhotoUrl ?? this.workerPhotoUrl,
       workerAverageRating: workerAverageRating ?? this.workerAverageRating,
+      workerHeadline: workerHeadline ?? this.workerHeadline,
+      workerSkills: workerSkills ?? this.workerSkills,
+      workerExperienceYears: workerExperienceYears ?? this.workerExperienceYears,
+      workerLocation: workerLocation ?? this.workerLocation,
       message: message ?? this.message,
       proposedRate: proposedRate ?? this.proposedRate,
       proposedRateType: proposedRateType ?? this.proposedRateType,
@@ -88,6 +104,10 @@ class ApplicationModel {
       'workerCategory': workerCategory,
       'workerPhotoUrl': workerPhotoUrl,
       'workerAverageRating': workerAverageRating,
+      'workerHeadline': workerHeadline,
+      'workerSkills': workerSkills,
+      'workerExperienceYears': workerExperienceYears,
+      'workerLocation': workerLocation,
       'message': message,
       'proposedRate': proposedRate,
       'proposedRateType': proposedRateType,
@@ -104,6 +124,12 @@ class ApplicationModel {
       return DateTime.now();
     }
 
+    final rawSkills = map['workerSkills'];
+    List<String> parsedSkills = [];
+    if (rawSkills is List) {
+      parsedSkills = rawSkills.map((e) => e.toString()).toList();
+    }
+
     return ApplicationModel(
       id: docId,
       jobId: map['jobId'] ?? '',
@@ -114,6 +140,10 @@ class ApplicationModel {
       workerCategory: map['workerCategory'] ?? '',
       workerPhotoUrl: map['workerPhotoUrl'],
       workerAverageRating: (map['workerAverageRating'] as num?)?.toDouble() ?? 0.0,
+      workerHeadline: map['workerHeadline'] ?? '',
+      workerSkills: parsedSkills,
+      workerExperienceYears: (map['workerExperienceYears'] as num?)?.toInt() ?? 0,
+      workerLocation: map['workerLocation'] ?? '',
       message: map['message'] ?? '',
       proposedRate: (map['proposedRate'] as num?)?.toDouble() ?? 0.0,
       proposedRateType: map['proposedRateType'] ?? AppConstants.rateTypeFixed,

@@ -13,7 +13,7 @@ class TestimonialsSection extends StatelessWidget {
     const testimonials = [
       _TestimonialData(
         quote:
-            'Finding an experienced electrician on short notice was always stressful. On Skill-Link, I connected directly with Ramesh in my sector. The work was done cleanly and billed transparently.',
+            'Finding an experienced electrician on short notice was always stressful. On Skill-Link, I connected directly with a verified electrician in my sector. The work was done cleanly and billed transparently.',
         name: 'Ananya Deshmukh',
         role: 'Customer • Pune',
         avatarInitial: 'AD',

@@ -6,12 +6,14 @@ import '../../../core/routing/route_names.dart';
 import '../../../core/utils/responsive_layout.dart';
 
 class LandingHeader extends StatelessWidget implements PreferredSizeWidget {
+  final VoidCallback? onHomeTap;
   final VoidCallback? onHowItWorksTap;
   final VoidCallback? onAboutTap;
   final VoidCallback? onFindWorkersTap;
 
   const LandingHeader({
     super.key,
+    this.onHomeTap,
     this.onHowItWorksTap,
     this.onAboutTap,
     this.onFindWorkersTap,
@@ -39,7 +41,7 @@ class LandingHeader extends StatelessWidget implements PreferredSizeWidget {
           children: [
             // Logo & Brand Name
             InkWell(
-              onTap: () => context.go(RouteNames.landing),
+              onTap: onHomeTap ?? () => context.go(RouteNames.landing),
               borderRadius: BorderRadius.circular(8),
               child: Row(
                 children: [
@@ -78,7 +80,7 @@ class LandingHeader extends StatelessWidget implements PreferredSizeWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _NavLink(label: 'Home', onTap: () => context.go(RouteNames.landing)),
+                      _NavLink(label: 'Home', onTap: onHomeTap ?? () => context.go(RouteNames.landing)),
                       const SizedBox(width: 18),
                       _NavLink(
                         label: 'Find Workers',

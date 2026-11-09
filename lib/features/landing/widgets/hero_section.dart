@@ -262,63 +262,6 @@ class HeroSection extends StatelessWidget {
               ],
             ),
           ),
-          // Floating Worker Card Badge
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [AppColors.softShadow],
-              ),
-              child: const Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.primaryTeal,
-                    child: Icon(Icons.electrical_services, color: AppColors.white, size: 22),
-                  ),
-                  SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Ramesh Verma',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.charcoal,
-                          ),
-                        ),
-                        Text(
-                          'Master Electrician • 8 yrs exp',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.secondaryGrey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.star_rounded, color: AppColors.mutedSaffron, size: 18),
-                      SizedBox(width: 4),
-                      Text(
-                        '4.9',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

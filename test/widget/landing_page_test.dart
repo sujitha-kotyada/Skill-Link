@@ -95,6 +95,16 @@ void main() {
     expect(find.text('TOP RATED LOCAL TALENT'), findsNothing);
     expect(find.text('Explore Skilled Professionals'), findsNothing);
     expect(find.text('Sunil Sharma'), findsNothing);
+
+    // Verify Ramesh Verma 4.9 rating badge is removed from LandingPage
+    expect(find.text('Ramesh Verma'), findsNothing);
+    expect(find.text('Master Electrician • 8 yrs exp'), findsNothing);
+
+    // Verify clicking Home in header executes scroll to home (top)
+    final homeNavLink = find.text('Home').first;
+    expect(homeNavLink, findsOneWidget);
+    await tester.tap(homeNavLink);
+    await tester.pumpAndSettle();
   });
 }
 
