@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routing/route_names.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../../../core/widgets/empty_state_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/customer_provider.dart';
 import '../widgets/worker_card.dart';
 import '../widgets/worker_filter_sheet.dart';
@@ -23,9 +26,12 @@ class _FindWorkersScreenState extends State<FindWorkersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final p = context.read<CustomerProvider>();
-      _searchController.text = p.searchQuery;
-      p.fetchWorkers();
+      final auth = context.read<AuthProvider>();
+      if (auth.isAuthenticated && (auth.currentUser?.isCustomer ?? false)) {
+        final p = context.read<CustomerProvider>();
+        _searchController.text = p.searchQuery;
+        p.fetchWorkers();
+      }
     });
   }
 
@@ -68,6 +74,46 @@ class _FindWorkersScreenState extends State<FindWorkersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
+    // 1. Check logged-out state
+    if (!authProvider.isAuthenticated) {
+      return Scaffold(
+        backgroundColor: AppColors.warmCream,
+        appBar: AppBar(
+          title: const Text('Find Skilled Workers', style: TextStyle(fontWeight: FontWeight.w700)),
+        ),
+        body: Center(
+          child: EmptyStateView(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign In Required',
+            description: 'Please sign in with your Skill-Link account to discover, search, and contact verified local workers.',
+            buttonLabel: 'Sign In to Skill-Link',
+            onButtonPressed: () => context.go('${RouteNames.login}?redirect=${Uri.encodeComponent(RouteNames.customerFindWorkers)}'),
+          ),
+        ),
+      );
+    }
+
+    // 2. Check customer role authorization
+    if (authProvider.currentUser != null && !authProvider.currentUser!.isCustomer) {
+      return Scaffold(
+        backgroundColor: AppColors.warmCream,
+        appBar: AppBar(
+          title: const Text('Find Skilled Workers', style: TextStyle(fontWeight: FontWeight.w700)),
+        ),
+        body: Center(
+          child: EmptyStateView(
+            icon: Icons.handyman_rounded,
+            title: 'Customer Portal Only',
+            description: 'The worker directory is designed for customers to hire talent. As a registered worker, you can discover opportunities in your Worker Dashboard.',
+            buttonLabel: 'Go to Worker Dashboard',
+            onButtonPressed: () => context.go(RouteNames.workerDashboard),
+          ),
+        ),
+      );
+    }
+
     final provider = context.watch<CustomerProvider>();
 
     return Scaffold(

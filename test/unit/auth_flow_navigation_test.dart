@@ -402,5 +402,122 @@ void main() {
       expect(authProvider.isAuthenticated, isFalse);
       expect(authProvider.status, equals(AuthStatus.unauthenticated));
     });
+
+    test('13a: getFindWorkersDestination returns Login with redirect for logged-out visitors', () {
+      expect(authProvider.isAuthenticated, isFalse);
+      final dest = authProvider.getFindWorkersDestination();
+      expect(dest, equals('${RouteNames.login}?redirect=${Uri.encodeComponent(RouteNames.customerFindWorkers)}'));
+    });
+
+    test('13b: getFindWorkersDestination returns Worker Dashboard for worker-only account', () async {
+      final now = DateTime.now();
+      fakeAuth.mockUser = UserModel(
+        uid: 'worker_only_dest',
+        fullName: 'Worker Only',
+        email: 'worker.dest@example.com',
+        activeRole: AppConstants.roleWorker,
+        roles: [AppConstants.roleWorker],
+        accountStatus: 'active',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await authProvider.signIn(email: 'worker.dest@example.com', password: 'pass');
+      expect(authProvider.hasCustomerRole, isFalse);
+      expect(authProvider.hasWorkerRole, isTrue);
+
+      final dest = authProvider.getFindWorkersDestination();
+      expect(dest, equals(RouteNames.workerDashboard));
+    });
+
+    test('13c: getFindWorkersDestination returns customerFindWorkers for customer account', () async {
+      final now = DateTime.now();
+      fakeAuth.mockUser = UserModel(
+        uid: 'cust_dest',
+        fullName: 'Customer Only',
+        email: 'cust.dest@example.com',
+        activeRole: AppConstants.roleCustomer,
+        roles: [AppConstants.roleCustomer],
+        accountStatus: 'active',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await authProvider.signIn(email: 'cust.dest@example.com', password: 'pass');
+      expect(authProvider.hasCustomerRole, isTrue);
+
+      final dest = authProvider.getFindWorkersDestination();
+      expect(dest, equals(RouteNames.customerFindWorkers));
+    });
+
+    test('14: determineInitialRoute honors preserved redirect parameter for authorized role', () async {
+      final now = DateTime.now();
+      fakeAuth.mockUser = UserModel(
+        uid: 'cust_redirect',
+        fullName: 'Customer Redirect',
+        email: 'cust.redir@example.com',
+        activeRole: AppConstants.roleCustomer,
+        roles: [AppConstants.roleCustomer],
+        accountStatus: 'active',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await authProvider.signIn(email: 'cust.redir@example.com', password: 'pass');
+
+      final route = authProvider.determineInitialRoute(redirectUrl: RouteNames.customerFindWorkers);
+      expect(route, equals(RouteNames.customerFindWorkers));
+    });
+
+    test('15: determineInitialRoute denies unauthorized redirect and falls back to user role dashboard', () async {
+      final now = DateTime.now();
+      fakeAuth.mockUser = UserModel(
+        uid: 'worker_redirect',
+        fullName: 'Worker Redirect',
+        email: 'worker.redir@example.com',
+        activeRole: AppConstants.roleWorker,
+        roles: [AppConstants.roleWorker],
+        accountStatus: 'active',
+        createdAt: now,
+        updatedAt: now,
+      );
+      fakeWorker.mockWorker = WorkerModel(
+        uid: 'worker_redirect',
+        fullName: 'Worker Redirect',
+        headline: 'Plumber',
+        description: 'Plumber bio',
+        skills: ['Plumbing'],
+        category: 'Plumber',
+        experienceYears: 4,
+        city: 'Delhi',
+        state: 'Delhi',
+        locality: 'Dwarka',
+        rate: 400,
+        availability: 'Daily',
+        profileStatus: 'completed',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await authProvider.signIn(email: 'worker.redir@example.com', password: 'pass');
+
+      // Worker attempting to access customer-only route via redirectUrl
+      final route = authProvider.determineInitialRoute(redirectUrl: RouteNames.customerFindWorkers);
+      expect(route, equals(RouteNames.workerDashboard));
+    });
+
+    test('16: Suspended account returns authError route and is blocked', () async {
+      final now = DateTime.now();
+      fakeAuth.mockUser = UserModel(
+        uid: 'suspended_user',
+        fullName: 'Suspended User',
+        email: 'suspended@example.com',
+        activeRole: AppConstants.roleCustomer,
+        roles: [AppConstants.roleCustomer],
+        accountStatus: 'suspended',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await authProvider.signIn(email: 'suspended@example.com', password: 'pass');
+      final route = authProvider.determineInitialRoute();
+      expect(route, equals(RouteNames.authError));
+    });
   });
 }

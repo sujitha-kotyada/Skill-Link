@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routing/route_names.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../providers/auth_provider.dart';
 
 class FinalCtaSection extends StatelessWidget {
   const FinalCtaSection({super.key});
@@ -159,7 +161,7 @@ class LandingFooter extends StatelessWidget {
                             ),
                             const SizedBox(height: 12),
                             _FooterLink(label: 'Home', onTap: () => context.go(RouteNames.landing)),
-                            _FooterLink(label: 'Find Workers', onTap: () => context.go(RouteNames.customerFindWorkers)),
+                            _FooterLink(label: 'Find Workers', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
                             _FooterLink(label: 'Sign In', onTap: () => context.go(RouteNames.login)),
                             _FooterLink(label: 'Get Started', onTap: () => context.go(RouteNames.register)),
                           ],
@@ -181,10 +183,10 @@ class LandingFooter extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _FooterLink(label: 'Electrician', onTap: () => context.go(RouteNames.customerFindWorkers)),
-                            _FooterLink(label: 'Plumber', onTap: () => context.go(RouteNames.customerFindWorkers)),
-                            _FooterLink(label: 'Carpenter', onTap: () => context.go(RouteNames.customerFindWorkers)),
-                            _FooterLink(label: 'All Categories', onTap: () => context.go(RouteNames.customerFindWorkers)),
+                            _FooterLink(label: 'Electrician', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
+                            _FooterLink(label: 'Plumber', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
+                            _FooterLink(label: 'Carpenter', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
+                            _FooterLink(label: 'All Categories', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
                           ],
                         ),
                       ),
@@ -234,7 +236,7 @@ class LandingFooter extends StatelessWidget {
                         runSpacing: 8,
                         children: [
                           _FooterLink(label: 'Home', onTap: () => context.go(RouteNames.landing)),
-                          _FooterLink(label: 'Find Workers', onTap: () => context.go(RouteNames.customerFindWorkers)),
+                          _FooterLink(label: 'Find Workers', onTap: () => context.go(context.read<AuthProvider>().getFindWorkersDestination())),
                           _FooterLink(label: 'Sign In', onTap: () => context.go(RouteNames.login)),
                           _FooterLink(label: 'Register', onTap: () => context.go(RouteNames.register)),
                         ],

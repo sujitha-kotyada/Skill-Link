@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routing/route_names.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/about_section.dart';
 import '../widgets/categories_section.dart';
 import '../widgets/community_impact_section.dart';
@@ -52,6 +54,11 @@ class _LandingPageState extends State<LandingPage> {
     super.dispose();
   }
 
+  void _handleFindWorkersTap(BuildContext context) {
+    final destination = context.read<AuthProvider>().getFindWorkersDestination();
+    context.go(destination);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +70,7 @@ class _LandingPageState extends State<LandingPage> {
             LandingHeader(
               onHowItWorksTap: () => _scrollToKey(_howItWorksKey),
               onAboutTap: () => _scrollToKey(_whyChooseKey),
-              onFindWorkersTap: () => context.go(RouteNames.customerFindWorkers),
+              onFindWorkersTap: () => _handleFindWorkersTap(context),
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -136,7 +143,7 @@ class _LandingPageState extends State<LandingPage> {
               title: const Text('Find Workers', style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.pop(context);
-                context.go(RouteNames.customerFindWorkers);
+                _handleFindWorkersTap(context);
               },
             ),
             ListTile(

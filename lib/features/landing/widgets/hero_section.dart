@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routing/route_names.dart';
 import '../../../core/utils/responsive_layout.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../providers/auth_provider.dart';
 
 class HeroSection extends StatelessWidget {
   const HeroSection({super.key});
@@ -68,7 +70,7 @@ class HeroSection extends StatelessWidget {
                   AppButton(
                     label: AppStrings.findSkilledWorkers,
                     icon: Icons.search_rounded,
-                    onPressed: () => context.go(RouteNames.customerFindWorkers),
+                    onPressed: () => context.go(context.read<AuthProvider>().getFindWorkersDestination()),
                     variant: AppButtonVariant.primary,
                   ),
                   AppButton(
@@ -124,7 +126,7 @@ class HeroSection extends StatelessWidget {
         AppButton(
           label: AppStrings.findSkilledWorkers,
           icon: Icons.search_rounded,
-          onPressed: () => context.go(RouteNames.customerFindWorkers),
+          onPressed: () => context.go(context.read<AuthProvider>().getFindWorkersDestination()),
           isFullWidth: true,
           variant: AppButtonVariant.primary,
         ),

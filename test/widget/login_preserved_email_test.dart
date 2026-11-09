@@ -15,6 +15,8 @@ import 'package:skill_link/repositories/saved_workers_repository.dart';
 import 'package:skill_link/repositories/worker_repository.dart';
 
 class _FakeAuthRepository implements AuthRepository {
+  UserModel? userToReturn;
+
   @override
   Stream<User?> get authStateChanges => const Stream.empty();
 
@@ -31,10 +33,13 @@ class _FakeAuthRepository implements AuthRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Future<UserModel> signInWithEmailAndPassword({required String email, required String password}) async => throw UnimplementedError();
+  Future<UserModel> signInWithEmailAndPassword({required String email, required String password}) async {
+    if (userToReturn != null) return userToReturn!;
+    throw UnimplementedError();
+  }
 
   @override
-  Future<UserModel?> getUserProfile(String uid) async => null;
+  Future<UserModel?> getUserProfile(String uid) async => userToReturn;
 
   @override
   Future<void> switchActiveRole(String uid, String newRole) async {}
@@ -116,13 +121,113 @@ void main() {
     expect(find.text('Sign In'), findsWidgets);
   });
 
-  testWidgets('14: Worker Directory remains functional after removing landing section', (WidgetTester tester) async {
+  testWidgets('FindWorkersScreen shows Sign In Required for unauthenticated visitors', (WidgetTester tester) async {
+    final fakeAuth = _FakeAuthRepository();
     final fakeWorker = _FakeWorkerRepository();
     final fakeSaved = _FakeSavedWorkersRepository();
+    final authProvider = AuthProvider(
+      authRepository: fakeAuth,
+      workerRepository: fakeWorker,
+    );
 
     await tester.pumpWidget(
       MultiProvider(
         providers: [
+          ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+          ChangeNotifierProvider<CustomerProvider>(
+            create: (_) => CustomerProvider(
+              workerRepository: fakeWorker,
+              savedWorkersRepository: fakeSaved,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const Scaffold(body: FindWorkersScreen()),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Verify unauthenticated lock screen is displayed
+    expect(find.text('Sign In Required'), findsOneWidget);
+    expect(find.text('Sign In to Skill-Link'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('FindWorkersScreen shows Customer Portal Only for worker-only users', (WidgetTester tester) async {
+    final fakeAuth = _FakeAuthRepository();
+    final fakeWorker = _FakeWorkerRepository();
+    final fakeSaved = _FakeSavedWorkersRepository();
+    final authProvider = AuthProvider(
+      authRepository: fakeAuth,
+      workerRepository: fakeWorker,
+    );
+
+    final now = DateTime.now();
+    fakeAuth.userToReturn = UserModel(
+      uid: 'worker_only_uid',
+      fullName: 'Worker User',
+      email: 'worker@example.com',
+      activeRole: 'worker',
+      roles: ['worker'],
+      accountStatus: 'active',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await authProvider.signIn(email: 'worker@example.com', password: 'pass');
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+          ChangeNotifierProvider<CustomerProvider>(
+            create: (_) => CustomerProvider(
+              workerRepository: fakeWorker,
+              savedWorkersRepository: fakeSaved,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const Scaffold(body: FindWorkersScreen()),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Verify worker-only access guard is displayed
+    expect(find.text('Customer Portal Only'), findsOneWidget);
+    expect(find.text('Go to Worker Dashboard'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('FindWorkersScreen renders search and directory for authenticated customers', (WidgetTester tester) async {
+    final fakeAuth = _FakeAuthRepository();
+    final fakeWorker = _FakeWorkerRepository();
+    final fakeSaved = _FakeSavedWorkersRepository();
+    final authProvider = AuthProvider(
+      authRepository: fakeAuth,
+      workerRepository: fakeWorker,
+    );
+
+    final now = DateTime.now();
+    fakeAuth.userToReturn = UserModel(
+      uid: 'customer_uid',
+      fullName: 'Customer User',
+      email: 'customer@example.com',
+      activeRole: 'customer',
+      roles: ['customer'],
+      accountStatus: 'active',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await authProvider.signIn(email: 'customer@example.com', password: 'pass');
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
           ChangeNotifierProvider<CustomerProvider>(
             create: (_) => CustomerProvider(
               workerRepository: fakeWorker,

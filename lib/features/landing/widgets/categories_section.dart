@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/routing/route_names.dart';
 import '../../../core/utils/responsive_layout.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/customer_provider.dart';
 
 class CategoriesSection extends StatelessWidget {
@@ -85,7 +85,7 @@ class CategoriesSection extends StatelessWidget {
                       icon: AppConstants.getCategoryIcon(category),
                       onTap: () {
                         context.read<CustomerProvider>().setCategory(category);
-                        context.go(RouteNames.customerFindWorkers);
+                        context.go(context.read<AuthProvider>().getFindWorkersDestination());
                       },
                     );
                   },

@@ -27,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
   WorkerModel? _workerProfile;
   String? _errorMessage;
   bool _isLoading = false;
+  bool _isRegistering = false;
   StreamSubscription? _authSubscription;
 
   AuthProvider({
@@ -57,6 +58,10 @@ class AuthProvider extends ChangeNotifier {
 
   void _init() {
     _authSubscription = _authRepository.authStateChanges.listen((firebaseUser) async {
+      if (_isRegistering) {
+        // While user is registering, do not process authStateChanges into an authenticated session
+        return;
+      }
       if (firebaseUser == null) {
         _currentUser = null;
         _workerProfile = null;
@@ -121,19 +126,42 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Centrally determines the appropriate dashboard or screen for an authenticated user.
-  String determineInitialRoute() {
+  String determineInitialRoute({String? redirectUrl}) {
+    if (_status == AuthStatus.accountSuspended ||
+        (_currentUser != null && _currentUser!.accountStatus != 'active')) {
+      return RouteNames.authError;
+    }
     if (_currentUser == null) return RouteNames.login;
-    if (_currentUser!.accountStatus != 'active') return RouteNames.login;
 
     final user = _currentUser!;
+    final hasCustomer = user.roles.contains(AppConstants.roleCustomer);
+    final hasWorker = user.roles.contains(AppConstants.roleWorker);
+
+    // If a redirect URL was requested and user is authorized, honor it
+    if (redirectUrl != null &&
+        redirectUrl.isNotEmpty &&
+        redirectUrl != RouteNames.login &&
+        redirectUrl != RouteNames.register &&
+        redirectUrl != RouteNames.forgotPassword &&
+        redirectUrl != RouteNames.splash) {
+      if (redirectUrl.startsWith('/customer/') && hasCustomer) {
+        return redirectUrl;
+      }
+      if (redirectUrl.startsWith('/worker/') && hasWorker) {
+        if (!isWorkerOnboarded && redirectUrl != RouteNames.workerOnboarding) {
+          return RouteNames.workerOnboarding;
+        }
+        return redirectUrl;
+      }
+    }
 
     // 1. Single role: Customer
-    if (user.isCustomerOnly) {
+    if (hasCustomer && !hasWorker) {
       return RouteNames.customerDashboard;
     }
 
     // 2. Single role: Worker
-    if (user.isWorkerOnly) {
+    if (hasWorker && !hasCustomer) {
       return isWorkerOnboarded
           ? RouteNames.workerDashboard
           : RouteNames.workerOnboarding;
@@ -141,7 +169,7 @@ class AuthProvider extends ChangeNotifier {
 
     // 3. Both roles:
     // Use the saved active portal if valid; otherwise display Portal Selection.
-    if (user.hasBothRoles) {
+    if (hasCustomer && hasWorker) {
       final active = user.activeRole;
       if (active == AppConstants.roleWorker) {
         return isWorkerOnboarded
@@ -154,7 +182,21 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
-    return RouteNames.customerDashboard;
+    return RouteNames.authError;
+  }
+
+  /// Returns the appropriate navigation destination when accessing Find Workers.
+  /// - Logged-out visitors -> Login with preserved redirect parameter
+  /// - Worker-only accounts -> Worker Dashboard
+  /// - Customer accounts -> Find Workers directory
+  String getFindWorkersDestination() {
+    if (!isAuthenticated) {
+      return '${RouteNames.login}?redirect=${Uri.encodeComponent(RouteNames.customerFindWorkers)}';
+    }
+    if (!hasCustomerRole && hasWorkerRole) {
+      return RouteNames.workerDashboard;
+    }
+    return RouteNames.customerFindWorkers;
   }
 
   Future<bool> signIn({
@@ -177,6 +219,16 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.authenticated;
       _setLoading(false);
       return true;
+    } on AccountSuspendedException catch (e) {
+      _setError(e.message);
+      _status = AuthStatus.accountSuspended;
+      _setLoading(false);
+      return false;
+    } on ProfileNotFoundException catch (e) {
+      _setError(e.message);
+      _status = AuthStatus.profileMissing;
+      _setLoading(false);
+      return false;
     } on AppException catch (e) {
       _setError(e.message);
       _status = AuthStatus.unauthenticated;
@@ -199,6 +251,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _clearError();
+    _isRegistering = true; // Shield against intermediate authStateChanges
 
     try {
       await _authRepository.registerWithEmailAndPassword(
@@ -212,14 +265,17 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = null;
       _workerProfile = null;
       _status = AuthStatus.unauthenticated;
+      _isRegistering = false;
       _setLoading(false);
       return true;
     } on AppException catch (e) {
       _setError(e.message);
+      _isRegistering = false;
       _setLoading(false);
       return false;
     } catch (e) {
       _setError('Registration failed: $e');
+      _isRegistering = false;
       _setLoading(false);
       return false;
     }

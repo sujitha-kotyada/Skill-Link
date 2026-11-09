@@ -15,6 +15,7 @@ import '../../features/jobs/screens/job_detail_screen.dart';
 import '../../features/jobs/screens/post_job_screen.dart';
 import '../../features/landing/screens/landing_page.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/onboarding/screens/splash_screen.dart';
 import '../../features/onboarding/screens/worker_onboarding_screen.dart';
 import '../../features/portal_selection/screens/portal_selection_screen.dart';
 import '../../features/portal_selection/screens/role_enrollment_screen.dart';
@@ -33,75 +34,100 @@ import '../../providers/auth_provider.dart';
 import 'route_names.dart';
 
 class AppRouter {
+  static String? evaluateRouteProtection({
+    required AuthProvider authProvider,
+    required String location,
+    String? redirectParam,
+  }) {
+    final status = authProvider.status;
+    final isAuthenticated = authProvider.isAuthenticated;
+    final user = authProvider.currentUser;
+
+    // 1. Initial Loading / Splash state: Hold at splash screen while auth resolves
+    if (status == AuthStatus.uninitialized || status == AuthStatus.loading) {
+      if (location == RouteNames.splash || location == RouteNames.landing) return null;
+      return RouteNames.splash;
+    }
+
+    // 2. Recoverable error states (networkError, profileMissing, accountSuspended)
+    if (status == AuthStatus.networkError ||
+        status == AuthStatus.profileMissing ||
+        status == AuthStatus.accountSuspended) {
+      if (location == RouteNames.authError) return null;
+      if (location == RouteNames.landing ||
+          location.startsWith(RouteNames.login) ||
+          location == RouteNames.register ||
+          location == RouteNames.forgotPassword) {
+        return null;
+      }
+      return RouteNames.authError;
+    }
+
+    // Public allowed routes - ONLY landing, login, register, forgot-password, splash
+    final isAuthRoute = location.startsWith(RouteNames.login) ||
+        location == RouteNames.register ||
+        location == RouteNames.forgotPassword;
+    final isPublicRoute = location == RouteNames.landing || isAuthRoute || location == RouteNames.splash;
+
+    // 3. Unauthenticated access protection:
+    // Any protected route (including /customer/find-workers, dashboard, etc.) redirects to Login
+    if (!isAuthenticated) {
+      if (isPublicRoute) return null;
+      return '${RouteNames.login}?redirect=${Uri.encodeComponent(location)}';
+    }
+
+    // 4. Authenticated user visiting auth routes (login/register)
+    if (isAuthRoute) {
+      return authProvider.determineInitialRoute(redirectUrl: redirectParam);
+    }
+
+    // 5. Authenticated user visiting splash
+    if (location == RouteNames.splash) {
+      return authProvider.determineInitialRoute();
+    }
+
+    // 6. Role-based private access enforcement
+    if (user != null) {
+      final hasCustomer = user.roles.contains(AppConstants.roleCustomer);
+      final hasWorker = user.roles.contains(AppConstants.roleWorker);
+
+      // All /customer/ routes are strictly for accounts with customer role
+      if (location.startsWith('/customer/')) {
+        if (!hasCustomer) {
+          return RouteNames.workerDashboard;
+        }
+      }
+
+      // All /worker/ routes are strictly for accounts with worker role
+      if (location.startsWith('/worker/')) {
+        if (!hasWorker) {
+          return RouteNames.customerDashboard;
+        }
+        if (!authProvider.isWorkerOnboarded && location != RouteNames.workerOnboarding) {
+          return RouteNames.workerOnboarding;
+        }
+      }
+    }
+
+    return null;
+  }
+
   static GoRouter createRouter(AuthProvider authProvider) {
     return GoRouter(
       initialLocation: RouteNames.landing,
       refreshListenable: authProvider,
       redirect: (context, state) {
-        final status = authProvider.status;
-        final isAuthenticated = authProvider.isAuthenticated;
-        final user = authProvider.currentUser;
-        final location = state.uri.toString();
-
-        if (status == AuthStatus.loading || status == AuthStatus.uninitialized) {
-          return null; // Don't redirect while auth is still loading
-        }
-
-        // Public allowed routes
-        final isAuthRoute = location == RouteNames.login ||
-            location == RouteNames.register ||
-            location == RouteNames.forgotPassword;
-        final isPublicAllowed = location == RouteNames.landing ||
-            location.startsWith('/customer/find-workers') ||
-            location.startsWith('/customer/workers/');
-
-        // If in recoverable error state (network error, missing profile, suspended)
-        if (status == AuthStatus.networkError ||
-            status == AuthStatus.profileMissing ||
-            status == AuthStatus.accountSuspended) {
-          if (location == RouteNames.authError) return null;
-          if (isPublicAllowed || isAuthRoute) return null;
-          return RouteNames.authError;
-        }
-
-        // If not authenticated and attempting to view protected route
-        if (!isAuthenticated) {
-          if (isAuthRoute || isPublicAllowed) return null;
-          return RouteNames.login;
-        }
-
-        // If authenticated and visiting auth routes (login/register)
-        if (isAuthRoute) {
-          return authProvider.determineInitialRoute();
-        }
-
-        // Protected role enforcement
-        if (user != null) {
-          // If accessing customer private routes, user must have customer role
-          if (location.startsWith('/customer/') &&
-              !location.startsWith('/customer/find-workers') &&
-              !location.startsWith('/customer/workers/') &&
-              !user.isCustomer) {
-            return authProvider.determineInitialRoute();
-          }
-
-          // If accessing worker routes, user must have worker role
-          if (location.startsWith('/worker/') && !user.isWorker) {
-            return authProvider.determineInitialRoute();
-          }
-
-          // If worker profile incomplete, redirect to onboarding
-          if (user.isWorkerActive &&
-              !authProvider.isWorkerOnboarded &&
-              location.startsWith('/worker/') &&
-              location != RouteNames.workerOnboarding) {
-            return RouteNames.workerOnboarding;
-          }
-        }
-
-        return null;
+        return evaluateRouteProtection(
+          authProvider: authProvider,
+          location: state.uri.toString(),
+          redirectParam: state.uri.queryParameters['redirect'],
+        );
       },
       routes: [
+        GoRoute(
+          path: RouteNames.splash,
+          builder: (context, state) => const SplashScreen(),
+        ),
         GoRoute(
           path: RouteNames.landing,
           builder: (context, state) => const LandingPage(),
