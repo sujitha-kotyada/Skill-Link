@@ -38,5 +38,14 @@ void main() {
     expect(find.text('Electrician'), findsWidgets);
     expect(find.text('Plumber'), findsWidgets);
     expect(find.text('Carpenter'), findsWidgets);
+
+    // Verify 'What is Skill-Link?' section is present
+    expect(find.text('What is Skill-Link?'), findsOneWidget);
+
+    // Verify Top Rated Workers section is completely removed from LandingPage
+    expect(find.text('TOP RATED LOCAL TALENT'), findsNothing);
+    expect(find.text('Explore Skilled Professionals'), findsNothing);
+    expect(find.text('Sunil Sharma'), findsNothing);
   });
 }
+

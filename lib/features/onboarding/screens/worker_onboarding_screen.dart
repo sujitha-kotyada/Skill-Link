@@ -454,3 +454,4 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
     );
   }
 }
+

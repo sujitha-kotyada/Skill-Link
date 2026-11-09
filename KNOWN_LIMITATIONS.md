@@ -29,3 +29,4 @@ Prior to launching to public end users:
 4. [ ] Deploy Storage Rules: `firebase deploy --only storage`.
 5. [ ] Provide `android/app/google-services.json` if releasing an Android APK.
 6. [ ] Deploy web build (`build/web`) to Firebase Hosting or your CDN of choice.
+

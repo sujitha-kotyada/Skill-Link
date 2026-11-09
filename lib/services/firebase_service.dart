@@ -56,3 +56,4 @@ class FirebaseService {
   static FirebaseFirestore get firestore => FirebaseFirestore.instance;
   static FirebaseStorage get storage => FirebaseStorage.instance;
 }
+

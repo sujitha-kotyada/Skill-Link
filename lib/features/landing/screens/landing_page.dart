@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routing/route_names.dart';
+import '../widgets/about_section.dart';
 import '../widgets/categories_section.dart';
 import '../widgets/community_impact_section.dart';
-import '../widgets/explore_workers_section.dart';
 import '../widgets/hero_section.dart';
 import '../widgets/how_it_works_section.dart';
 import '../widgets/landing_footer.dart';
@@ -71,10 +71,10 @@ class _LandingPageState extends State<LandingPage> {
                 child: Column(
                   children: [
                     const HeroSection(),
+                    const AboutSection(),
                     Container(key: _categoriesKey, child: const CategoriesSection()),
                     Container(key: _howItWorksKey, child: const HowItWorksSection()),
                     Container(key: _whyChooseKey, child: const WhyChooseSection()),
-                    const ExploreWorkersSection(),
                     const WorkerOpportunitiesSection(),
                     const CommunityImpactSection(),
                     const TestimonialsSection(),
@@ -183,3 +183,4 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 }
+

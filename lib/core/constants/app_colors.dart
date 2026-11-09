@@ -35,3 +35,4 @@ class AppColors {
     offset: const Offset(0, 8),
   );
 }
+

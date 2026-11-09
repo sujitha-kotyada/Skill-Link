@@ -92,3 +92,4 @@ class ApplicationProvider extends ChangeNotifier {
     }
   }
 }
+

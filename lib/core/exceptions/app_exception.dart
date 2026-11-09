@@ -24,3 +24,12 @@ class ValidationException extends AppException {
 class PermissionException extends AppException {
   const PermissionException(super.message, {super.code, super.details});
 }
+
+class ProfileNotFoundException extends AppException {
+  const ProfileNotFoundException(super.message, {super.code, super.details});
+}
+
+class AccountSuspendedException extends AppException {
+  const AccountSuspendedException(super.message, {super.code, super.details});
+}
+

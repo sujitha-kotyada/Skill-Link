@@ -60,3 +60,4 @@
 - File paths:
   - `workers/{workerId}/**` — Writable only by `request.auth.uid == workerId`. Publicly readable.
   - `users/{userId}/**` — Writable only by `request.auth.uid == userId`. Publicly readable.
+

@@ -13,7 +13,8 @@ import '../../../core/widgets/custom_snackbar.dart';
 import '../../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? initialEmail;
+  const LoginScreen({super.key, this.initialEmail});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,8 +22,15 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail ?? '');
+    _passwordController = TextEditingController();
+  }
 
   @override
   void dispose() {
@@ -45,19 +53,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       CustomSnackBar.showSuccess(context, 'Welcome back to Skill-Link!');
 
-      // Check if user has both roles -> offer portal choice, otherwise go to active role dashboard
-      final user = authProvider.currentUser;
-      if (user != null && user.hasBothRoles) {
-        context.go(RouteNames.portalSelect);
-      } else if (user != null && user.isWorkerActive) {
-        if (!authProvider.isWorkerOnboarded) {
-          context.go(RouteNames.workerOnboarding);
-        } else {
-          context.go(RouteNames.workerDashboard);
-        }
-      } else {
-        context.go(RouteNames.customerDashboard);
-      }
+      // Navigate to the centrally determined destination based on actual role & profile status
+      final destination = authProvider.determineInitialRoute();
+      context.go(destination);
     } else {
       final errorMsg = authProvider.errorMessage ?? 'Sign in failed. Please check credentials.';
       CustomSnackBar.showError(context, errorMsg);
@@ -186,8 +184,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 24),
 
                       // Register Link
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Text(
                             "Don't have an account yet?",

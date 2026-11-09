@@ -55,3 +55,4 @@ class RoleBadge extends StatelessWidget {
     );
   }
 }
+

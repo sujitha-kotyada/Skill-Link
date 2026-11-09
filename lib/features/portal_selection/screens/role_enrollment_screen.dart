@@ -176,3 +176,4 @@ class _RoleEnrollmentScreenState extends State<RoleEnrollmentScreen> {
     );
   }
 }
+

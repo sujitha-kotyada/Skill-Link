@@ -2,12 +2,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import '../core/exceptions/app_exception.dart';
+import '../core/routing/route_names.dart';
 import '../models/user_model.dart';
 import '../models/worker_model.dart';
 import '../repositories/auth_repository.dart';
 import '../repositories/worker_repository.dart';
 
-enum AuthStatus { uninitialized, authenticated, unauthenticated, loading }
+enum AuthStatus {
+  uninitialized,
+  authenticated,
+  unauthenticated,
+  loading,
+  networkError,
+  profileMissing,
+  accountSuspended,
+}
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _authRepository;
@@ -60,24 +69,92 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> refreshUserProfile([String? uid]) async {
-    final targetUid = uid ?? _currentUser?.uid;
-    if (targetUid == null) return;
+    final targetUid = uid ?? _currentUser?.uid ?? _authRepository.currentFirebaseUser?.uid;
+    if (targetUid == null) {
+      _currentUser = null;
+      _workerProfile = null;
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return;
+    }
 
     try {
-      _currentUser = await _authRepository.getUserProfile(targetUid);
-      if (_currentUser != null) {
-        if (_currentUser!.isWorker) {
-          _workerProfile = await _workerRepository.getWorkerProfile(targetUid);
+      final profile = await _authRepository.getUserProfile(targetUid);
+      if (profile == null) {
+        // Authenticated in Auth, but user document missing
+        _currentUser = null;
+        _workerProfile = null;
+        _status = AuthStatus.profileMissing;
+        _setError('Account profile document was not found.');
+      } else if (profile.accountStatus != 'active') {
+        _currentUser = profile;
+        _status = AuthStatus.accountSuspended;
+        _setError('Your account is currently ${profile.accountStatus}.');
+      } else {
+        _currentUser = profile;
+        if (profile.isWorker) {
+          try {
+            _workerProfile = await _workerRepository.getWorkerProfile(targetUid);
+          } catch (_) {}
         }
         _status = AuthStatus.authenticated;
-      } else {
-        _status = AuthStatus.unauthenticated;
+        _clearError();
       }
+    } on DatabaseException catch (e) {
+      // Temporary network or Firestore fetch failure. Do NOT treat as unauthenticated!
+      debugPrint('Database or network error: $e');
+      _status = AuthStatus.networkError;
+      _setError('Network connection error: Unable to load profile. Please check your connection.');
     } catch (e) {
-      debugPrint('Error refreshing user profile: $e');
-      _status = AuthStatus.unauthenticated;
+      debugPrint('Unexpected error refreshing profile: $e');
+      _status = AuthStatus.networkError;
+      _setError('Unable to load user profile: $e');
     }
     notifyListeners();
+  }
+
+  Future<void> retryLoadProfile() async {
+    _setLoading(true);
+    _clearError();
+    await refreshUserProfile();
+    _setLoading(false);
+  }
+
+  /// Centrally determines the appropriate dashboard or screen for an authenticated user.
+  String determineInitialRoute() {
+    if (_currentUser == null) return RouteNames.login;
+    if (_currentUser!.accountStatus != 'active') return RouteNames.login;
+
+    final user = _currentUser!;
+
+    // 1. Single role: Customer
+    if (user.isCustomerOnly) {
+      return RouteNames.customerDashboard;
+    }
+
+    // 2. Single role: Worker
+    if (user.isWorkerOnly) {
+      return isWorkerOnboarded
+          ? RouteNames.workerDashboard
+          : RouteNames.workerOnboarding;
+    }
+
+    // 3. Both roles:
+    // Use the saved active portal if valid; otherwise display Portal Selection.
+    if (user.hasBothRoles) {
+      final active = user.activeRole;
+      if (active == AppConstants.roleWorker) {
+        return isWorkerOnboarded
+            ? RouteNames.workerDashboard
+            : RouteNames.workerOnboarding;
+      } else if (active == AppConstants.roleCustomer) {
+        return RouteNames.customerDashboard;
+      } else {
+        return RouteNames.portalSelect;
+      }
+    }
+
+    return RouteNames.customerDashboard;
   }
 
   Future<bool> signIn({
@@ -93,17 +170,21 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
       if (_currentUser!.isWorker) {
-        _workerProfile = await _workerRepository.getWorkerProfile(_currentUser!.uid);
+        try {
+          _workerProfile = await _workerRepository.getWorkerProfile(_currentUser!.uid);
+        } catch (_) {}
       }
       _status = AuthStatus.authenticated;
       _setLoading(false);
       return true;
     } on AppException catch (e) {
       _setError(e.message);
+      _status = AuthStatus.unauthenticated;
       _setLoading(false);
       return false;
     } catch (e) {
       _setError('Sign in failed: $e');
+      _status = AuthStatus.unauthenticated;
       _setLoading(false);
       return false;
     }
@@ -120,14 +201,17 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      _currentUser = await _authRepository.registerWithEmailAndPassword(
+      await _authRepository.registerWithEmailAndPassword(
         fullName: fullName,
         email: email,
         password: password,
         initialRoles: initialRoles,
         initialActiveRole: initialActiveRole,
       );
-      _status = AuthStatus.authenticated;
+      // Explicitly marked unauthenticated because AuthRepository signs out after creating doc
+      _currentUser = null;
+      _workerProfile = null;
+      _status = AuthStatus.unauthenticated;
       _setLoading(false);
       return true;
     } on AppException catch (e) {
@@ -281,3 +365,4 @@ class AuthProvider extends ChangeNotifier {
     super.dispose();
   }
 }
+

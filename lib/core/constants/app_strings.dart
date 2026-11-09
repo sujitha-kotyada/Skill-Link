@@ -25,3 +25,4 @@ class AppStrings {
   static const String workerRoleDesc =
       'Showcase your skills, discover local opportunities and manage your applications.';
 }
+

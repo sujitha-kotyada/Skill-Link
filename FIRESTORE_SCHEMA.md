@@ -132,3 +132,4 @@ The following composite queries are configured and indexed for optimal query per
 7. `notifications`: `recipientId ASC` + `createdAt DESC`
 8. `reviews`: `workerId ASC` + `createdAt DESC`
 9. `savedWorkers`: `customerId ASC` + `createdAt DESC`
+

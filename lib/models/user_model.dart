@@ -29,6 +29,8 @@ class UserModel {
   bool get isCustomer => roles.contains(AppConstants.roleCustomer);
   bool get isWorker => roles.contains(AppConstants.roleWorker);
   bool get hasBothRoles => isCustomer && isWorker;
+  bool get isCustomerOnly => isCustomer && !isWorker;
+  bool get isWorkerOnly => isWorker && !isCustomer;
   bool get isCustomerActive => activeRole == AppConstants.roleCustomer;
   bool get isWorkerActive => activeRole == AppConstants.roleWorker;
 
@@ -105,3 +107,4 @@ class UserModel {
     );
   }
 }
+

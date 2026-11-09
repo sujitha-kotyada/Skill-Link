@@ -74,3 +74,4 @@ One of the foundational architectural tenets of Skill-Link is that a single user
 2. **Account Roles (`roles`):** Stored in `users/{uid}.roles` as a list containing `'customer'`, `'worker'`, or both. Only these two values are permitted. Administrative privileges can never be self-assigned.
 3. **Interface Preference (`activeRole`):** Stored in `users/{uid}.activeRole`. Indicates whether the user currently wants to view the Customer Portal or Worker Portal.
 4. **Security Enforcement:** The active portal controls only client-side navigation. All actual write and read operations are verified against `roles` and owner IDs in `firestore.rules`.
+

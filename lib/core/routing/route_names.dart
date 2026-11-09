@@ -5,6 +5,7 @@ class RouteNames {
   static const String forgotPassword = '/forgot-password';
   static const String portalSelect = '/portal-select';
   static const String roleEnroll = '/role-enroll';
+  static const String authError = '/auth-error';
 
   // Worker Onboarding
   static const String workerOnboarding = '/worker/onboarding';
@@ -34,3 +35,4 @@ class RouteNames {
   static const String settings = '/settings';
   static const String writeReview = '/reviews/write';
 }
+

@@ -58,3 +58,4 @@
 - **In-App Notifications:** Real-time updates delivered to Firestore and displayed with unread badges when proposals are submitted, accepted, or reviewed.
 - **Centralized Error Handling:** User-friendly snackbars and error banners with zero raw stack traces exposed.
 - **Performance:** Firestore queries are limited and indexed to prevent excessive reads and eliminate memory bloat.
+

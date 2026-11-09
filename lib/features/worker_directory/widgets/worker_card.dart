@@ -143,3 +143,4 @@ class WorkerCard extends StatelessWidget {
     );
   }
 }
+

@@ -89,3 +89,4 @@ class JobProvider extends ChangeNotifier {
     return _jobRepository.getJobById(jobId);
   }
 }
+

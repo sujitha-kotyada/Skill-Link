@@ -172,3 +172,4 @@ class _CategoryCard extends StatelessWidget {
     );
   }
 }
+

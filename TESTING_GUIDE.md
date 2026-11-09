@@ -64,3 +64,4 @@ When connecting to the Firebase Emulator Suite or live Firebase backend, the fol
 18. **Accept Proposal:** Click "Accept Worker". Verify status updates to *Accepted* and notification is dispatched.
 19. **Submit Rating Review:** As customer, open the accepted proposal, click "Write Review", choose 5 stars, enter feedback, and submit. Verify worker's average rating updates.
 20. **Sign Out:** Navigate to `/profile` and click "Sign Out". Verify protected routes are inaccessible and redirect to `/login`.
+

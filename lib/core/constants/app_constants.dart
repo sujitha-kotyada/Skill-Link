@@ -94,3 +94,4 @@ class AppConstants {
   static const double tabletBreakpoint = 1024.0;
   static const double maxContentWidth = 1200.0;
 }
+

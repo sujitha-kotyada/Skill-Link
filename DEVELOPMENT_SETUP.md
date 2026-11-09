@@ -81,3 +81,4 @@ flutter build apk --release
 flutter build appbundle --release
 ```
 Artifacts are generated in `build/app/outputs/flutter-apk/`.
+

@@ -63,9 +63,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         : selectedRoles.first;
 
     final authProvider = context.read<AuthProvider>();
+    final email = _emailController.text.trim();
     final success = await authProvider.register(
       fullName: _nameController.text.trim(),
-      email: _emailController.text.trim(),
+      email: email,
       password: _passwordController.text,
       initialRoles: selectedRoles,
       initialActiveRole: initialActiveRole,
@@ -74,18 +75,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
 
     if (success) {
-      CustomSnackBar.showSuccess(context, 'Account created successfully!');
+      // Success feedback
+      CustomSnackBar.showSuccess(
+        context,
+        'Account created successfully! Please sign in to continue.',
+      );
 
-      if (selectedRoles.length > 1) {
-        // Both roles selected -> Open Portal Selection screen
-        context.go(RouteNames.portalSelect);
-      } else if (initialActiveRole == AppConstants.roleWorker) {
-        // Worker only -> Worker Onboarding
-        context.go(RouteNames.workerOnboarding);
-      } else {
-        // Customer only -> Customer Dashboard
-        context.go(RouteNames.customerDashboard);
-      }
+      // Navigate to the Login page and preserve the registered email address
+      context.go(RouteNames.login, extra: email);
     } else {
       final errorMsg = authProvider.errorMessage ?? 'Registration failed. Please try again.';
       CustomSnackBar.showError(context, errorMsg);

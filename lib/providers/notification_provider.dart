@@ -30,3 +30,4 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 }
+

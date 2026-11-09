@@ -371,3 +371,4 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 }
+

@@ -37,7 +37,7 @@ class AuthRepository {
     required List<String> initialRoles,
     required String initialActiveRole,
   }) async {
-    // Validate roles strictly
+    // 1. Validate roles strictly
     for (final role in initialRoles) {
       if (!AppConstants.validRoles.contains(role)) {
         throw const ValidationException('Invalid role specified. Only customer and worker are allowed.');
@@ -47,6 +47,7 @@ class AuthRepository {
       throw const ValidationException('Active role must be one of the selected roles.');
     }
 
+    // 2. Create the Firebase Authentication account
     final credential = await _authService.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -57,8 +58,10 @@ class AuthRepository {
       throw const AuthException('Registration failed: no user returned.');
     }
 
-    // Update display name
-    await user.updateDisplayName(fullName);
+    // Update display name in Firebase Auth
+    try {
+      await user.updateDisplayName(fullName);
+    } catch (_) {}
 
     final now = DateTime.now();
     final userProfile = UserModel(
@@ -72,11 +75,32 @@ class AuthRepository {
       updatedAt: now,
     );
 
-    await _firestoreService.setDocument(
-      _firestoreService.users,
-      user.uid,
-      userProfile.toMap(),
-    );
+    // 3. Create, persist, and verify the corresponding Firestore user document
+    try {
+      await _firestoreService.setDocument(
+        _firestoreService.users,
+        user.uid,
+        userProfile.toMap(),
+      );
+
+      // Verify that the required account data was successfully saved
+      final verifyDoc = await _firestoreService.getDocument(_firestoreService.users, user.uid);
+      if (!verifyDoc.exists || verifyDoc.data() == null) {
+        throw const DatabaseException('Verification failed: User profile document was not created.');
+      }
+    } catch (e) {
+      // Partial registration rollback: Delete the created Auth user so email can be safely reused
+      try {
+        await user.delete();
+      } catch (delErr) {
+        // Logging only if deletion fails
+      }
+      throw DatabaseException('Failed to complete profile registration: $e. You can safely try registering again.');
+    }
+
+    // 6. Explicitly sign out the newly created Firebase Authentication session
+    // (Firebase createUserWithEmailAndPassword automatically signs in the user)
+    await _authService.signOut();
 
     return userProfile;
   }
@@ -85,6 +109,7 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
+    // 1. Authenticate using Firebase Authentication
     final credential = await _authService.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -95,25 +120,23 @@ class AuthRepository {
       throw const AuthException('Sign in failed: no user returned.');
     }
 
+    // 2. Retrieve the authenticated user's Firestore profile using their UID
     final profile = await getUserProfile(user.uid);
+
+    // 3. Verify that the profile exists
     if (profile == null) {
-      // Profile doc missing, create default customer profile
-      final now = DateTime.now();
-      final defaultProfile = UserModel(
-        uid: user.uid,
-        fullName: user.displayName ?? 'Skill-Link User',
-        email: user.email ?? email,
-        activeRole: AppConstants.roleCustomer,
-        roles: [AppConstants.roleCustomer],
-        createdAt: now,
-        updatedAt: now,
+      await _authService.signOut();
+      throw const ProfileNotFoundException(
+        'Account profile document not found. Please contact support or re-register.',
       );
-      await _firestoreService.setDocument(
-        _firestoreService.users,
-        user.uid,
-        defaultProfile.toMap(),
+    }
+
+    // 4. Verify that the account is active
+    if (profile.accountStatus != 'active') {
+      await _authService.signOut();
+      throw AccountSuspendedException(
+        'Your account is currently ${profile.accountStatus}. Please contact support.',
       );
-      return defaultProfile;
     }
 
     return profile;
@@ -207,3 +230,4 @@ class AuthRepository {
     await _authService.signOut();
   }
 }
+

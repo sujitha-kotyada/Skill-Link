@@ -3,6 +3,7 @@ import '../../core/constants/app_constants.dart';
 import '../../features/applications/screens/apply_job_screen.dart';
 import '../../features/applications/screens/job_applications_screen.dart';
 import '../../features/applications/screens/my_applications_screen.dart';
+import '../../features/authentication/screens/auth_error_screen.dart';
 import '../../features/authentication/screens/forgot_password_screen.dart';
 import '../../features/authentication/screens/login_screen.dart';
 import '../../features/authentication/screens/register_screen.dart';
@@ -54,6 +55,15 @@ class AppRouter {
             location.startsWith('/customer/find-workers') ||
             location.startsWith('/customer/workers/');
 
+        // If in recoverable error state (network error, missing profile, suspended)
+        if (status == AuthStatus.networkError ||
+            status == AuthStatus.profileMissing ||
+            status == AuthStatus.accountSuspended) {
+          if (location == RouteNames.authError) return null;
+          if (isPublicAllowed || isAuthRoute) return null;
+          return RouteNames.authError;
+        }
+
         // If not authenticated and attempting to view protected route
         if (!isAuthenticated) {
           if (isAuthRoute || isPublicAllowed) return null;
@@ -62,24 +72,31 @@ class AppRouter {
 
         // If authenticated and visiting auth routes (login/register)
         if (isAuthRoute) {
-          if (user != null && user.hasBothRoles) {
-            return RouteNames.portalSelect;
-          } else if (user != null && user.isWorkerActive) {
-            return authProvider.isWorkerOnboarded
-                ? RouteNames.workerDashboard
-                : RouteNames.workerOnboarding;
-          } else {
-            return RouteNames.customerDashboard;
-          }
+          return authProvider.determineInitialRoute();
         }
 
-        // If authenticated as worker but onboarding incomplete
-        if (user != null &&
-            user.isWorkerActive &&
-            !authProvider.isWorkerOnboarded &&
-            location.startsWith('/worker/') &&
-            location != RouteNames.workerOnboarding) {
-          return RouteNames.workerOnboarding;
+        // Protected role enforcement
+        if (user != null) {
+          // If accessing customer private routes, user must have customer role
+          if (location.startsWith('/customer/') &&
+              !location.startsWith('/customer/find-workers') &&
+              !location.startsWith('/customer/workers/') &&
+              !user.isCustomer) {
+            return authProvider.determineInitialRoute();
+          }
+
+          // If accessing worker routes, user must have worker role
+          if (location.startsWith('/worker/') && !user.isWorker) {
+            return authProvider.determineInitialRoute();
+          }
+
+          // If worker profile incomplete, redirect to onboarding
+          if (user.isWorkerActive &&
+              !authProvider.isWorkerOnboarded &&
+              location.startsWith('/worker/') &&
+              location != RouteNames.workerOnboarding) {
+            return RouteNames.workerOnboarding;
+          }
         }
 
         return null;
@@ -91,7 +108,10 @@ class AppRouter {
         ),
         GoRoute(
           path: RouteNames.login,
-          builder: (context, state) => const LoginScreen(),
+          builder: (context, state) {
+            final email = state.extra as String? ?? state.uri.queryParameters['email'];
+            return LoginScreen(initialEmail: email);
+          },
         ),
         GoRoute(
           path: RouteNames.register,
@@ -100,6 +120,10 @@ class AppRouter {
         GoRoute(
           path: RouteNames.forgotPassword,
           builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
+          path: RouteNames.authError,
+          builder: (context, state) => const AuthErrorScreen(),
         ),
         GoRoute(
           path: RouteNames.portalSelect,

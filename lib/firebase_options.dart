@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 class DefaultFirebaseOptions {
-  static const bool isConfigured = false; // Set to true once credentials are added
+  static const bool isConfigured = true; // Set to true once credentials are added
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -27,36 +27,38 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'FIREBASE_WEB_API_KEY_PLACEHOLDER',
-    appId: '1:1234567890:web:skilllinkplaceholder',
-    messagingSenderId: '1234567890',
-    projectId: 'skill-link-app',
-    authDomain: 'skill-link-app.firebaseapp.com',
-    storageBucket: 'skill-link-app.appspot.com',
+    apiKey: 'AIzaSyDK9VjOlUUCh4syslK28wfRmLnPDSDxISM',
+    appId: '1:906834929541:web:d1ccaa0ab04a32047586ec',
+    messagingSenderId: '906834929541',
+    projectId: 'skill-link-2de23',
+    authDomain: 'skill-link-2de23.firebaseapp.com',
+    storageBucket: 'skill-link-2de23.firebasestorage.app',
+    measurementId: 'G-FFZ84N7H57',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'FIREBASE_ANDROID_API_KEY_PLACEHOLDER',
-    appId: '1:1234567890:android:skilllinkplaceholder',
-    messagingSenderId: '1234567890',
-    projectId: 'skill-link-app',
-    storageBucket: 'skill-link-app.appspot.com',
+    apiKey: 'AIzaSyDK9VjOlUUCh4syslK28wfRmLnPDSDxISM',
+    appId: '1:906834929541:web:d1ccaa0ab04a32047586ec',
+    messagingSenderId: '906834929541',
+    projectId: 'skill-link-2de23',
+    storageBucket: 'skill-link-2de23.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'FIREBASE_IOS_API_KEY_PLACEHOLDER',
-    appId: '1:1234567890:ios:skilllinkplaceholder',
-    messagingSenderId: '1234567890',
-    projectId: 'skill-link-app',
-    storageBucket: 'skill-link-app.appspot.com',
+    apiKey: 'AIzaSyDK9VjOlUUCh4syslK28wfRmLnPDSDxISM',
+    appId: '1:906834929541:web:d1ccaa0ab04a32047586ec',
+    messagingSenderId: '906834929541',
+    projectId: 'skill-link-2de23',
+    storageBucket: 'skill-link-2de23.firebasestorage.app',
     iosBundleId: 'com.skilllink.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'FIREBASE_WINDOWS_API_KEY_PLACEHOLDER',
-    appId: '1:1234567890:windows:skilllinkplaceholder',
-    messagingSenderId: '1234567890',
-    projectId: 'skill-link-app',
-    storageBucket: 'skill-link-app.appspot.com',
+    apiKey: 'AIzaSyDK9VjOlUUCh4syslK28wfRmLnPDSDxISM',
+    appId: '1:906834929541:web:d1ccaa0ab04a32047586ec',
+    messagingSenderId: '906834929541',
+    projectId: 'skill-link-2de23',
+    storageBucket: 'skill-link-2de23.firebasestorage.app',
   );
 }
+

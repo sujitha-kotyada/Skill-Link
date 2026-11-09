@@ -81,3 +81,4 @@ class InteractiveRatingBar extends StatelessWidget {
     );
   }
 }
+

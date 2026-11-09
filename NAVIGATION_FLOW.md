@@ -84,3 +84,4 @@ flowchart TD
 - **Desktop & Tablet Viewports (>= 600px):**
   - Features a persistent `NavigationRail` alongside the main content area, keeping navigation accessible without consuming vertical viewport height.
   - Top app bar includes an instant "Switch Portal" pill button, notification bell with unread indicator, and clickable user avatar.
+
