@@ -27,7 +27,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDK9VjOlUUCh4syslK28wfRmLnPDSDxISM',
+    apiKey: 'your api key',
     appId: '1:906834929541:web:d1ccaa0ab04a32047586ec',
     messagingSenderId: '906834929541',
     projectId: 'skill-link-2de23',
