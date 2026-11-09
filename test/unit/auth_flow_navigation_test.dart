@@ -15,6 +15,8 @@ class FakeAuthRepository implements AuthRepository {
   UserModel? mockUser;
   bool wasSignedOutAfterRegistration = false;
   bool failNextNetworkOperation = false;
+  bool failWithPermissionDenied = false;
+  bool failWithPartialRegistration = false;
   bool returnNullProfile = false;
 
   final StreamController<User?> _authController = StreamController<User?>.broadcast();
@@ -33,6 +35,13 @@ class FakeAuthRepository implements AuthRepository {
     required List<String> initialRoles,
     required String initialActiveRole,
   }) async {
+    if (failWithPartialRegistration) {
+      wasSignedOutAfterRegistration = true;
+      _authController.add(null);
+      throw const PartialRegistrationException(
+        'Account credentials created, but saving profile document failed. Please sign in to complete your profile.',
+      );
+    }
     final now = DateTime.now();
     final profile = UserModel(
       uid: 'registered_uid_123',
@@ -56,6 +65,9 @@ class FakeAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    if (failWithPermissionDenied) {
+      throw const PermissionException('Missing or insufficient permissions reading user profile.');
+    }
     if (failNextNetworkOperation) {
       throw const DatabaseException('Network timeout connecting to Firestore.');
     }
@@ -70,6 +82,9 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<UserModel?> getUserProfile(String uid) async {
+    if (failWithPermissionDenied) {
+      throw const PermissionException('Missing or insufficient permissions.');
+    }
     if (failNextNetworkOperation) {
       throw const DatabaseException('Simulated Firestore network timeout.');
     }
@@ -518,6 +533,47 @@ void main() {
       await authProvider.signIn(email: 'suspended@example.com', password: 'pass');
       final route = authProvider.determineInitialRoute();
       expect(route, equals(RouteNames.authError));
+    });
+
+    test('17: Firestore permission-denied during login sets AuthStatus.permissionDenied and routes to authError', () async {
+      fakeAuth.failWithPermissionDenied = true;
+
+      final success = await authProvider.signIn(
+        email: 'denied@example.com',
+        password: 'Password123!',
+      );
+
+      expect(success, isFalse);
+      expect(authProvider.status, equals(AuthStatus.permissionDenied));
+      expect(authProvider.errorMessage, contains('Missing or insufficient permissions'));
+      expect(authProvider.determineInitialRoute(), equals(RouteNames.authError));
+    });
+
+    test('18: Firestore permission-denied during profile refresh sets AuthStatus.permissionDenied', () async {
+      fakeAuth.failWithPermissionDenied = true;
+      await authProvider.refreshUserProfile('some_uid');
+
+      expect(authProvider.status, equals(AuthStatus.permissionDenied));
+      expect(authProvider.errorMessage, contains('Missing or insufficient permissions'));
+      expect(authProvider.determineInitialRoute(), equals(RouteNames.authError));
+    });
+
+    test('19: Partial registration failure sets profileMissing and does not delete account', () async {
+      fakeAuth.failWithPartialRegistration = true;
+
+      final success = await authProvider.register(
+        fullName: 'Partial User',
+        email: 'partial@example.com',
+        password: 'Password123!',
+        initialRoles: [AppConstants.roleCustomer],
+        initialActiveRole: AppConstants.roleCustomer,
+      );
+
+      expect(success, isFalse);
+      expect(authProvider.status, equals(AuthStatus.profileMissing));
+      expect(authProvider.errorMessage, contains('Account credentials created'));
+      // Verified session was signed out cleanly
+      expect(fakeAuth.wasSignedOutAfterRegistration, isTrue);
     });
   });
 }

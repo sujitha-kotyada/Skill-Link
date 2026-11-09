@@ -2,27 +2,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // =========================================================================
+    // HELPER FUNCTIONS
+    // =========================================================================
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Role helpers based on stored roles in user doc
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
+    // Role helper with safe existence check to prevent rule runtime errors
     function hasRole(role) {
-      return isAuthenticated() && 
-        role in getUserData(request.auth.uid).roles;
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        role in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
     }
 
     function isValidRoleList(roles) {
-      // Must only contain 'customer' and/or 'worker'. Admin self-assignment is strictly forbidden!
+      // Must only contain 'customer' and/or 'worker'. Admin self-assignment is strictly forbidden.
       return roles is list &&
              roles.size() >= 1 &&
              roles.size() <= 2 &&
@@ -34,29 +33,37 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // USERS COLLECTION: users/{uid}
-    // Private user profile. Strictly owner readable and owner writable.
+    // USERS COLLECTION: users/{userId}
+    // Private user profile. Strictly owner-readable and owner-writable.
     // =========================================================================
     match /users/{userId} {
       allow read: if isOwner(userId);
       
       allow create: if isOwner(userId) &&
         request.resource.data.uid == userId &&
+        request.resource.data.email is string &&
+        request.resource.data.fullName is string &&
         isValidRoleList(request.resource.data.roles) &&
         isValidActiveRole(request.resource.data.activeRole) &&
-        request.resource.data.keys().hasAll(['uid', 'email', 'fullName', 'roles', 'activeRole', 'createdAt']) &&
-        // Ensure no admin escalation
+        request.resource.data.activeRole in request.resource.data.roles &&
+        request.resource.data.accountStatus == 'active' &&
+        request.resource.data.keys().hasAll(['uid', 'email', 'fullName', 'roles', 'activeRole', 'accountStatus', 'createdAt', 'updatedAt']) &&
+        // Strict guard: Admin privilege escalation is strictly prohibited
         (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false);
 
       allow update: if isOwner(userId) &&
         request.resource.data.uid == userId &&
-        // Prevent changing email or uid
+        // Immutable core fields: cannot change email, uid, or createdAt
         request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        // Protected authorization fields: user cannot modify accountStatus
+        request.resource.data.accountStatus == resource.data.accountStatus &&
         isValidRoleList(request.resource.data.roles) &&
+        // User cannot arbitrarily drop existing roles or escalate
+        request.resource.data.roles.hasAll(resource.data.roles) &&
         isValidActiveRole(request.resource.data.activeRole) &&
-        // Enforce that activeRole must exist in the user's roles
         request.resource.data.activeRole in request.resource.data.roles &&
-        // Ensure user cannot grant themselves admin
+        // Strict guard: Admin privilege escalation is strictly prohibited
         (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false);
 
       allow delete: if false; // Deletion handled via account management or Cloud Function
@@ -64,32 +71,37 @@ service cloud.firestore {
 
     // =========================================================================
     // WORKER PROFILES: workerProfiles/{workerId}
-    // Public directory data. Readable by any client (even public landing page).
-    // Writable only by the verified worker owner.
+    // Public directory data for marketplace discovery.
+    // Writable only by the verified worker owner (validated through trusted roles).
     // =========================================================================
     match /workerProfiles/{workerId} {
-      allow read: if true; // Public worker discovery
+      allow read: if true; // Public worker discovery on marketplace
 
       allow create: if isOwner(workerId) &&
         request.resource.data.uid == workerId &&
         hasRole('worker') &&
-        request.resource.data.keys().hasAll(['uid', 'fullName', 'headline', 'category', 'experienceYears', 'city', 'rate', 'availability']) &&
         request.resource.data.rate is number && request.resource.data.rate >= 0 &&
-        request.resource.data.experienceYears is number && request.resource.data.experienceYears >= 0;
+        request.resource.data.experienceYears is number && request.resource.data.experienceYears >= 0 &&
+        // Initial profile creation cannot fabricate ratings
+        (request.resource.data.averageRating == 0 || request.resource.data.averageRating == 0.0) &&
+        request.resource.data.reviewCount == 0 &&
+        request.resource.data.keys().hasAll(['uid', 'fullName', 'headline', 'category', 'experienceYears', 'city', 'rate', 'availability', 'profileStatus', 'createdAt', 'updatedAt']);
 
       allow update: if isOwner(workerId) &&
         request.resource.data.uid == workerId &&
         // Worker cannot manipulate rating or review count directly
         request.resource.data.averageRating == resource.data.averageRating &&
-        request.resource.data.reviewCount == resource.data.reviewCount;
+        request.resource.data.reviewCount == resource.data.reviewCount &&
+        request.resource.data.rate is number && request.resource.data.rate >= 0 &&
+        request.resource.data.experienceYears is number && request.resource.data.experienceYears >= 0;
 
       allow delete: if isOwner(workerId);
     }
 
     // =========================================================================
     // JOBS COLLECTION: jobs/{jobId}
-    // Readable by authenticated users (or workers browsing).
-    // Created and managed only by the customer owner.
+    // Readable by authenticated users (or workers browsing jobs).
+    // Created and managed only by the verified customer owner.
     // =========================================================================
     match /jobs/{jobId} {
       allow read: if isAuthenticated();
@@ -99,7 +111,7 @@ service cloud.firestore {
         request.resource.data.customerId == request.auth.uid &&
         request.resource.data.status in ['open', 'in_progress', 'completed', 'cancelled'] &&
         request.resource.data.budget is number && request.resource.data.budget >= 0 &&
-        request.resource.data.keys().hasAll(['customerId', 'title', 'category', 'description', 'city', 'budget', 'status', 'createdAt']);
+        request.resource.data.keys().hasAll(['customerId', 'title', 'category', 'description', 'city', 'budget', 'status', 'createdAt', 'updatedAt']);
 
       allow update: if isAuthenticated() &&
         resource.data.customerId == request.auth.uid &&
@@ -111,9 +123,8 @@ service cloud.firestore {
 
     // =========================================================================
     // APPLICATIONS COLLECTION: applications/{applicationId}
-    // Created by workers for open jobs.
+    // Created by verified workers for open jobs.
     // Readable by the worker who applied OR the customer who posted the job.
-    // Customer can update status (accept/reject). Worker can withdraw.
     // =========================================================================
     match /applications/{applicationId} {
       allow read: if isAuthenticated() && (
@@ -125,7 +136,7 @@ service cloud.firestore {
         hasRole('worker') &&
         request.resource.data.workerId == request.auth.uid &&
         request.resource.data.status == 'applied' &&
-        request.resource.data.keys().hasAll(['jobId', 'customerId', 'workerId', 'message', 'proposedRate', 'status', 'createdAt']);
+        request.resource.data.keys().hasAll(['jobId', 'customerId', 'workerId', 'message', 'proposedRate', 'status', 'createdAt', 'updatedAt']);
 
       allow update: if isAuthenticated() && (
         // Worker can withdraw their application
@@ -157,8 +168,8 @@ service cloud.firestore {
 
     // =========================================================================
     // REVIEWS COLLECTION: reviews/{reviewId}
-    // Publicly readable ratings and feedback.
-    // Only customer can create after a job. Cannot review oneself.
+    // Publicly readable ratings and feedback for worker transparency.
+    // Created only by verified customer after a service. Cannot review oneself.
     // =========================================================================
     match /reviews/{reviewId} {
       allow read: if true; // Public reviews display
@@ -182,12 +193,10 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
 
-      // System or authorized user can create a notification directed to another
       allow create: if isAuthenticated() &&
         request.resource.data.recipientId != null &&
         request.resource.data.keys().hasAll(['recipientId', 'title', 'message', 'type', 'read', 'createdAt']);
 
-      // Recipient can mark as read
       allow update: if isAuthenticated() &&
         resource.data.recipientId == request.auth.uid &&
         request.resource.data.recipientId == request.auth.uid;

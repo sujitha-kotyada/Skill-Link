@@ -33,3 +33,7 @@ class AccountSuspendedException extends AppException {
   const AccountSuspendedException(super.message, {super.code, super.details});
 }
 
+class PartialRegistrationException extends AppException {
+  const PartialRegistrationException(super.message, {super.code, super.details});
+}
+

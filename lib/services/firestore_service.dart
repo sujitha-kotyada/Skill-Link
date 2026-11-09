@@ -21,8 +21,12 @@ class FirestoreService {
     try {
       return await col.doc(docId).get();
     } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw PermissionException('Missing or insufficient permissions reading document ${col.path}/$docId: ${e.message}', code: e.code);
+      }
       throw DatabaseException('Failed to fetch document: ${e.message}', code: e.code);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('An error occurred while loading data: $e');
     }
   }
@@ -36,8 +40,12 @@ class FirestoreService {
     try {
       await col.doc(docId).set(data, SetOptions(merge: merge));
     } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw PermissionException('Missing or insufficient permissions saving document ${col.path}/$docId: ${e.message}', code: e.code);
+      }
       throw DatabaseException('Failed to save document: ${e.message}', code: e.code);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('An error occurred while saving data: $e');
     }
   }
@@ -50,8 +58,12 @@ class FirestoreService {
     try {
       await col.doc(docId).update(data);
     } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw PermissionException('Missing or insufficient permissions updating document ${col.path}/$docId: ${e.message}', code: e.code);
+      }
       throw DatabaseException('Failed to update document: ${e.message}', code: e.code);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('An error occurred while updating data: $e');
     }
   }
@@ -60,8 +72,12 @@ class FirestoreService {
     try {
       await col.doc(docId).delete();
     } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw PermissionException('Missing or insufficient permissions deleting document ${col.path}/$docId: ${e.message}', code: e.code);
+      }
       throw DatabaseException('Failed to delete document: ${e.message}', code: e.code);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('An error occurred while deleting data: $e');
     }
   }
@@ -73,8 +89,12 @@ class FirestoreService {
     try {
       return await col.add(data);
     } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw PermissionException('Missing or insufficient permissions creating record in ${col.path}: ${e.message}', code: e.code);
+      }
       throw DatabaseException('Failed to create document: ${e.message}', code: e.code);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('An error occurred while creating record: $e');
     }
   }

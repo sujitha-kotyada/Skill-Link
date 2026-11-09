@@ -26,6 +26,7 @@ class AuthRepository {
       }
       return UserModel.fromMap(doc.data() as Map<String, dynamic>, docId: doc.id);
     } catch (e) {
+      if (e is AppException) rethrow;
       throw DatabaseException('Failed to fetch user profile: $e');
     }
   }
@@ -48,10 +49,21 @@ class AuthRepository {
     }
 
     // 2. Create the Firebase Authentication account
-    final credential = await _authService.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    UserCredential credential;
+    try {
+      credential = await _authService.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw const AuthException(
+          'An account with this email address already exists. Please sign in or use profile recovery.',
+          code: 'email-already-in-use',
+        );
+      }
+      throw AuthException(e.message ?? 'Registration failed: ${e.code}', code: e.code);
+    }
 
     final user = credential.user;
     if (user == null) {
@@ -89,16 +101,18 @@ class AuthRepository {
         throw const DatabaseException('Verification failed: User profile document was not created.');
       }
     } catch (e) {
-      // Partial registration rollback: Delete the created Auth user so email can be safely reused
+      // Do not silently delete the created Auth account.
+      // Sign out cleanly and provide a recoverable state.
       try {
-        await user.delete();
-      } catch (delErr) {
-        // Logging only if deletion fails
-      }
-      throw DatabaseException('Failed to complete profile registration: $e. You can safely try registering again.');
+        await _authService.signOut();
+      } catch (_) {}
+      throw PartialRegistrationException(
+        'Account was created, but saving your user profile failed ($e). Please sign in to complete profile setup.',
+        details: user.uid,
+      );
     }
 
-    // 6. Explicitly sign out the newly created Firebase Authentication session
+    // 4. Explicitly sign out the newly created Firebase Authentication session
     // (Firebase createUserWithEmailAndPassword automatically signs in the user)
     await _authService.signOut();
 

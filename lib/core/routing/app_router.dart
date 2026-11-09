@@ -49,10 +49,11 @@ class AppRouter {
       return RouteNames.splash;
     }
 
-    // 2. Recoverable error states (networkError, profileMissing, accountSuspended)
+    // 2. Recoverable error states (networkError, profileMissing, accountSuspended, permissionDenied)
     if (status == AuthStatus.networkError ||
         status == AuthStatus.profileMissing ||
-        status == AuthStatus.accountSuspended) {
+        status == AuthStatus.accountSuspended ||
+        status == AuthStatus.permissionDenied) {
       if (location == RouteNames.authError) return null;
       if (location == RouteNames.landing ||
           location.startsWith(RouteNames.login) ||

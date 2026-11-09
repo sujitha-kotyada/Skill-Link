@@ -16,6 +16,7 @@ enum AuthStatus {
   networkError,
   profileMissing,
   accountSuspended,
+  permissionDenied,
 }
 
 class AuthProvider extends ChangeNotifier {
@@ -105,11 +106,23 @@ class AuthProvider extends ChangeNotifier {
         _status = AuthStatus.authenticated;
         _clearError();
       }
+    } on PermissionException catch (e) {
+      debugPrint('Firestore Permission error: $e');
+      _currentUser = null;
+      _workerProfile = null;
+      _status = AuthStatus.permissionDenied;
+      _setError('Firestore permission error: Missing or insufficient permissions. Please check security rules in Firebase Console.');
     } on DatabaseException catch (e) {
-      // Temporary network or Firestore fetch failure. Do NOT treat as unauthenticated!
-      debugPrint('Database or network error: $e');
-      _status = AuthStatus.networkError;
-      _setError('Network connection error: Unable to load profile. Please check your connection.');
+      if (e.code == 'permission-denied') {
+        _currentUser = null;
+        _workerProfile = null;
+        _status = AuthStatus.permissionDenied;
+        _setError('Firestore permission error: Missing or insufficient permissions. Please check security rules in Firebase Console.');
+      } else {
+        debugPrint('Database or network error: $e');
+        _status = AuthStatus.networkError;
+        _setError('Network connection error: Unable to load profile. Please check your connection.');
+      }
     } catch (e) {
       debugPrint('Unexpected error refreshing profile: $e');
       _status = AuthStatus.networkError;
@@ -128,6 +141,7 @@ class AuthProvider extends ChangeNotifier {
   /// Centrally determines the appropriate dashboard or screen for an authenticated user.
   String determineInitialRoute({String? redirectUrl}) {
     if (_status == AuthStatus.accountSuspended ||
+        _status == AuthStatus.permissionDenied ||
         (_currentUser != null && _currentUser!.accountStatus != 'active')) {
       return RouteNames.authError;
     }
@@ -219,6 +233,11 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.authenticated;
       _setLoading(false);
       return true;
+    } on PermissionException catch (e) {
+      _setError('Firestore permission error: Missing or insufficient permissions (${e.message}). Please check security rules in Firebase Console.');
+      _status = AuthStatus.permissionDenied;
+      _setLoading(false);
+      return false;
     } on AccountSuspendedException catch (e) {
       _setError(e.message);
       _status = AuthStatus.accountSuspended;
@@ -227,6 +246,16 @@ class AuthProvider extends ChangeNotifier {
     } on ProfileNotFoundException catch (e) {
       _setError(e.message);
       _status = AuthStatus.profileMissing;
+      _setLoading(false);
+      return false;
+    } on DatabaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        _setError('Firestore permission error: Missing or insufficient permissions. Please check security rules in Firebase Console.');
+        _status = AuthStatus.permissionDenied;
+      } else {
+        _setError(e.message);
+        _status = AuthStatus.networkError;
+      }
       _setLoading(false);
       return false;
     } on AppException catch (e) {
@@ -268,6 +297,18 @@ class AuthProvider extends ChangeNotifier {
       _isRegistering = false;
       _setLoading(false);
       return true;
+    } on PartialRegistrationException catch (e) {
+      _setError(e.message);
+      _status = AuthStatus.profileMissing;
+      _isRegistering = false;
+      _setLoading(false);
+      return false;
+    } on PermissionException catch (e) {
+      _setError('Firestore permission error: Missing or insufficient permissions (${e.message}). Your security rules in Firebase Console must allow authenticated profile creation.');
+      _status = AuthStatus.permissionDenied;
+      _isRegistering = false;
+      _setLoading(false);
+      return false;
     } on AppException catch (e) {
       _setError(e.message);
       _isRegistering = false;

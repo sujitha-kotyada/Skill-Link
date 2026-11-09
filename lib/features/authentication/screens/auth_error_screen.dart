@@ -37,6 +37,11 @@ class AuthErrorScreen extends StatelessWidget {
       description = errorMsg ?? 'Your account has been deactivated or suspended. Please contact support for assistance.';
       icon = Icons.block_rounded;
       iconColor = AppColors.errorRed;
+    } else if (status == AuthStatus.permissionDenied) {
+      title = 'Firestore Permissions Required';
+      description = errorMsg ?? 'Database access was denied. The security rules in your Firebase Console must allow authenticated users to read and write their profile.';
+      icon = Icons.security_rounded;
+      iconColor = AppColors.errorRed;
     }
 
     return Scaffold(
@@ -86,7 +91,9 @@ class AuthErrorScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
 
-                    if (status == AuthStatus.networkError || status == AuthStatus.profileMissing) ...[
+                    if (status == AuthStatus.networkError ||
+                        status == AuthStatus.profileMissing ||
+                        status == AuthStatus.permissionDenied) ...[
                       AppButton(
                         label: 'Retry Connection',
                         icon: Icons.refresh_rounded,

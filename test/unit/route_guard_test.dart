@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skill_link/core/constants/app_constants.dart';
+import 'package:skill_link/core/exceptions/app_exception.dart';
 import 'package:skill_link/core/routing/app_router.dart';
 import 'package:skill_link/core/routing/route_names.dart';
 import 'package:skill_link/models/user_model.dart';
@@ -12,6 +13,7 @@ import 'package:skill_link/repositories/worker_repository.dart';
 
 class _FakeAuthRepo implements AuthRepository {
   UserModel? mockUser;
+  bool failWithPermission = false;
   final StreamController<User?> _controller = StreamController<User?>.broadcast();
 
   void emitLoggedOut() {
@@ -43,7 +45,12 @@ class _FakeAuthRepo implements AuthRepository {
   }
 
   @override
-  Future<UserModel?> getUserProfile(String uid) async => mockUser;
+  Future<UserModel?> getUserProfile(String uid) async {
+    if (failWithPermission) {
+      throw const PermissionException('Missing or insufficient permissions.');
+    }
+    return mockUser;
+  }
 
   @override
   Future<void> switchActiveRole(String uid, String newRole) async {}
@@ -492,6 +499,18 @@ void main() {
         redirectParam: RouteNames.customerFindWorkers,
       );
       expect(redirect, equals(RouteNames.workerDashboard));
+    });
+
+    test('10. AuthStatus.permissionDenied redirects protected routes to /auth-error', () async {
+      fakeAuth.failWithPermission = true;
+      await authProvider.refreshUserProfile('denied_user');
+      expect(authProvider.status, equals(AuthStatus.permissionDenied));
+
+      final redirect = AppRouter.evaluateRouteProtection(
+        authProvider: authProvider,
+        location: RouteNames.customerDashboard,
+      );
+      expect(redirect, equals(RouteNames.authError));
     });
   });
 }

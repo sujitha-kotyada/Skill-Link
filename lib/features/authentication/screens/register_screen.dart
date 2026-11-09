@@ -86,6 +86,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       final errorMsg = authProvider.errorMessage ?? 'Registration failed. Please try again.';
       CustomSnackBar.showError(context, errorMsg);
+
+      if (errorMsg.contains('already exists') || errorMsg.contains('profile setup')) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Existing Account Detected'),
+            content: Text(errorMsg),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Dismiss'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.go(RouteNames.login, extra: email);
+                },
+                child: const Text('Go to Sign In'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
