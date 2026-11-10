@@ -100,6 +100,14 @@ void main() {
     expect(find.text('Ramesh Verma'), findsNothing);
     expect(find.text('Master Electrician • 8 yrs exp'), findsNothing);
 
+    // Verify Voices from the Neighborhood / Testimonials section is completely removed
+    expect(find.text('VOICES FROM THE NEIGHBORHOOD'), findsNothing);
+    expect(find.text('Voices from the Neighbourhood'), findsNothing);
+    expect(find.text('What Our Users Say'), findsNothing);
+    expect(find.text('Ananya Deshmukh'), findsNothing);
+    expect(find.text('Rajesh K. Sharma'), findsNothing);
+    expect(find.text('Arjun Menon'), findsNothing);
+
     // Verify clicking Home in header executes scroll to home (top)
     final homeNavLink = find.text('Home').first;
     expect(homeNavLink, findsOneWidget);

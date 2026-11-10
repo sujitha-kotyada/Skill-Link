@@ -12,6 +12,7 @@ import '../../../core/widgets/rating_stars.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../models/application_model.dart';
 import '../../../models/job_model.dart';
+import '../../../models/worker_model.dart';
 import '../../../providers/application_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/worker_provider.dart';
@@ -32,7 +33,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       final authProvider = context.read<AuthProvider>();
       if (authProvider.currentUser != null) {
         workerProvider.loadProfile(authProvider.currentUser!.uid);
-        workerProvider.fetchAvailableJobs();
+        workerProvider.fetchRecommendedJobs();
       }
     });
   }
@@ -66,8 +67,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 _buildQuickActionBanner(context),
                 const SizedBox(height: 32),
 
-                // Recent Opportunities / Available Jobs Snippet
-                _buildAvailableJobsSnippet(context, workerProvider),
+                // Recommended Opportunities Matching Worker Profile
+                _buildAvailableJobsSnippet(context, workerProvider, workerProfile),
                 const SizedBox(height: 36),
 
                 // Applications Tracker Snippet
@@ -226,8 +227,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  Widget _buildAvailableJobsSnippet(BuildContext context, WorkerProvider provider) {
-    final jobs = provider.availableJobs.take(3).toList();
+  Widget _buildAvailableJobsSnippet(
+    BuildContext context,
+    WorkerProvider provider,
+    WorkerModel? workerProfile,
+  ) {
+    final jobs = provider.getRecommendedJobs(workerProfile).take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,7 +241,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Available Jobs For You',
+              'Recommended Jobs For You',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.charcoal),
             ),
             TextButton(
@@ -246,7 +251,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        if (provider.isLoadingJobs)
+        if (provider.isLoading)
           const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
         else if (jobs.isEmpty)
           Container(
@@ -256,11 +261,20 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.borderGrey),
             ),
-            child: const Center(
-              child: Text(
-                'No open jobs matching your category currently. Check back soon!',
-                style: TextStyle(color: AppColors.secondaryGrey),
-              ),
+            child: Column(
+              children: [
+                const Text(
+                  'No open jobs matching your profile category currently. Check back soon or browse all available jobs!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.secondaryGrey),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => context.go(RouteNames.workerBrowseJobs),
+                  icon: const Icon(Icons.search_rounded, size: 18),
+                  label: const Text('Explore All Jobs'),
+                ),
+              ],
             ),
           )
         else
@@ -271,7 +285,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final job = jobs[index];
-              return _AvailableJobCard(job: job);
+              return _AvailableJobCard(job: job, isProfileMatch: true);
             },
           ),
       ],
@@ -402,8 +416,9 @@ class _MetricCard extends StatelessWidget {
 
 class _AvailableJobCard extends StatelessWidget {
   final JobModel job;
+  final bool isProfileMatch;
 
-  const _AvailableJobCard({required this.job});
+  const _AvailableJobCard({required this.job, this.isProfileMatch = false});
 
   @override
   Widget build(BuildContext context) {
@@ -417,7 +432,10 @@ class _AvailableJobCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -430,7 +448,18 @@ class _AvailableJobCard extends StatelessWidget {
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primaryTeal),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    if (isProfileMatch)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.terracotta.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Matched your profile',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.terracotta),
+                        ),
+                      ),
                     Text(
                       '${job.city}, ${job.location}',
                       style: const TextStyle(fontSize: 12, color: AppColors.secondaryGrey),

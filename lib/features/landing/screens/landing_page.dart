@@ -12,7 +12,6 @@ import '../widgets/hero_section.dart';
 import '../widgets/how_it_works_section.dart';
 import '../widgets/landing_footer.dart';
 import '../widgets/landing_header.dart';
-import '../widgets/testimonials_section.dart';
 import '../widgets/why_choose_section.dart';
 import '../widgets/worker_opportunities_section.dart';
 
@@ -86,7 +85,6 @@ class _LandingPageState extends State<LandingPage> {
                     Container(key: _whyChooseKey, child: const WhyChooseSection()),
                     const WorkerOpportunitiesSection(),
                     const CommunityImpactSection(),
-                    const TestimonialsSection(),
                     const FinalCtaSection(),
                     LandingFooter(onHomeTap: _scrollToTop),
                   ],

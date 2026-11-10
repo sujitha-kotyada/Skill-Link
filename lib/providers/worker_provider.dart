@@ -21,8 +21,10 @@ class WorkerProvider extends ChangeNotifier {
   double? _maxBudget;
   String _sortBy = 'newest';
 
+  List<JobModel> _allOpenJobs = [];
   List<JobModel> _availableJobs = [];
   bool _isLoadingJobs = false;
+  int _fetchRequestCounter = 0;
 
   WorkerProvider({
     WorkerRepository? workerRepository,
@@ -42,6 +44,26 @@ class WorkerProvider extends ChangeNotifier {
   String get sortBy => _sortBy;
   List<JobModel> get availableJobs => _availableJobs;
   bool get isLoadingJobs => _isLoadingJobs;
+
+  bool get isSearching => _searchQuery.trim().isNotEmpty;
+  bool get hasActiveFilters =>
+      _selectedCategory != 'All' ||
+      _selectedCity.trim().isNotEmpty ||
+      (_minBudget != null && _minBudget! > 0) ||
+      (_maxBudget != null && _maxBudget! > 0);
+
+  List<JobModel> getRecommendedJobs([WorkerModel? overrideProfile]) {
+    final effectiveProfile = overrideProfile ?? _profile;
+    if (effectiveProfile == null) return [];
+    return _allOpenJobs
+        .where((job) => JobRepository.matchesWorkerProfile(job, effectiveProfile))
+        .toList();
+  }
+
+  bool doesJobMatchProfile(JobModel job, [WorkerModel? overrideProfile]) {
+    final effectiveProfile = overrideProfile ?? _profile;
+    return JobRepository.matchesWorkerProfile(job, effectiveProfile);
+  }
 
   Future<void> loadProfile(String uid) async {
     _isLoading = true;
@@ -90,11 +112,21 @@ class WorkerProvider extends ChangeNotifier {
 
   void setJobCategory(String category) {
     _selectedCategory = category;
+    _availableJobs = [];
     fetchAvailableJobs();
   }
 
   void setJobSearchQuery(String query) {
+    if (_searchQuery == query) return;
     _searchQuery = query;
+    _availableJobs = [];
+    fetchAvailableJobs();
+  }
+
+  void clearSearchQuery() {
+    if (_searchQuery.isEmpty) return;
+    _searchQuery = '';
+    _availableJobs = [];
     fetchAvailableJobs();
   }
 
@@ -110,6 +142,7 @@ class WorkerProvider extends ChangeNotifier {
     _minBudget = minBudget;
     _maxBudget = maxBudget;
     if (sortBy != null) _sortBy = sortBy;
+    _availableJobs = [];
     fetchAvailableJobs();
   }
 
@@ -120,15 +153,17 @@ class WorkerProvider extends ChangeNotifier {
     _minBudget = null;
     _maxBudget = null;
     _sortBy = 'newest';
+    _availableJobs = [];
     fetchAvailableJobs();
   }
 
   Future<void> fetchAvailableJobs() async {
+    final requestId = ++_fetchRequestCounter;
     _isLoadingJobs = true;
     notifyListeners();
 
     try {
-      _availableJobs = await _jobRepository.fetchAvailableJobs(
+      final results = await _jobRepository.fetchAvailableJobs(
         category: _selectedCategory == 'All' ? null : _selectedCategory,
         searchQuery: _searchQuery,
         city: _selectedCity,
@@ -136,12 +171,27 @@ class WorkerProvider extends ChangeNotifier {
         maxBudget: _maxBudget,
         sortBy: _sortBy,
       );
+      if (requestId != _fetchRequestCounter) return;
+      _availableJobs = results;
+      if (!isSearching && !hasActiveFilters) {
+        _allOpenJobs = results;
+      }
       _isLoadingJobs = false;
       notifyListeners();
     } catch (e) {
+      if (requestId != _fetchRequestCounter) return;
+      _availableJobs = [];
       _isLoadingJobs = false;
       notifyListeners();
     }
+  }
+
+  Future<void> fetchRecommendedJobs() async {
+    try {
+      final results = await _jobRepository.fetchAvailableJobs(sortBy: 'newest');
+      _allOpenJobs = results;
+      notifyListeners();
+    } catch (_) {}
   }
 }
 
